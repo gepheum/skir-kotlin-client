@@ -23,7 +23,7 @@ jobs:
       uses: gradle/actions/setup-gradle@v3
 
     - name: Check code formatting
-      run: ./gradlew ktlintFormat
+      run: ./gradlew ktlintCheck
 
     - name: Run tests
       run: ./gradlew test
