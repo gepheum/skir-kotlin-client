@@ -1,1 +1,1 @@
-rootProject.name = "skir-kotlin-client"
+rootProject.name = "skir-client"
