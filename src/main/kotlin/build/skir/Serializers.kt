@@ -47,16 +47,16 @@ object Serializers {
 
     /** Serializer for 64-bit unsigned integers. */
     @JvmStatic
-    @get:JvmName("uint64")
-    val uint64: build.skir.Serializer<ULong> = build.skir.Serializer(build.skir.Uint64Serializer)
+    @get:JvmName("hash64")
+    val hash64: build.skir.Serializer<ULong> = build.skir.Serializer(build.skir.Hash64Serializer)
 
     /**
      * Serializer for 64-bit unsigned integers, represented as `long` values on the
      * Java side.
      */
     @JvmStatic
-    @get:JvmName("javaUint64")
-    val javaUint64: build.skir.Serializer<Long> = build.skir.Serializer(build.skir.JavaUint64Serializer)
+    @get:JvmName("javaHash64")
+    val javaHash64: build.skir.Serializer<Long> = build.skir.Serializer(build.skir.JavaHash64Serializer)
 
     /** Serializer for 32-bit floating-point numbers. */
     @JvmStatic
@@ -292,7 +292,7 @@ private object Int64Serializer : build.skir.PrimitiveSerializer<Long>() {
     override val typeDescriptor get() = PrimitiveDescriptor.Reflective.Int64
 }
 
-private object Uint64Serializer : build.skir.PrimitiveSerializer<ULong>() {
+private object Hash64Serializer : build.skir.PrimitiveSerializer<ULong>() {
     override fun isDefault(value: ULong): Boolean {
         return value == 0UL
     }
@@ -359,11 +359,11 @@ private object Uint64Serializer : build.skir.PrimitiveSerializer<ULong>() {
         out.append(input).append("UL")
     }
 
-    override val typeName get() = "uint64"
-    override val typeDescriptor get() = PrimitiveDescriptor.Reflective.Uint64
+    override val typeName get() = "hash64"
+    override val typeDescriptor get() = PrimitiveDescriptor.Reflective.Hash64
 }
 
-private object JavaUint64Serializer : build.skir.PrimitiveSerializer<Long>() {
+private object JavaHash64Serializer : build.skir.PrimitiveSerializer<Long>() {
     override fun isDefault(value: Long): Boolean {
         return value == 0L
     }
@@ -372,7 +372,7 @@ private object JavaUint64Serializer : build.skir.PrimitiveSerializer<Long>() {
         input: Long,
         buffer: Buffer,
     ) {
-        return build.skir.Uint64Serializer.encode(input.toULong(), buffer)
+        return build.skir.Hash64Serializer.encode(input.toULong(), buffer)
     }
 
     override fun decode(
@@ -386,14 +386,14 @@ private object JavaUint64Serializer : build.skir.PrimitiveSerializer<Long>() {
         input: Long,
         readableFlavor: Boolean,
     ): JsonElement {
-        return build.skir.Uint64Serializer.toJson(input.toULong(), readableFlavor)
+        return build.skir.Hash64Serializer.toJson(input.toULong(), readableFlavor)
     }
 
     override fun fromJson(
         json: JsonElement,
         keepUnrecognizedValues: Boolean,
     ): Long {
-        return build.skir.Uint64Serializer.fromJson(json, keepUnrecognizedValues).toLong()
+        return build.skir.Hash64Serializer.fromJson(json, keepUnrecognizedValues).toLong()
     }
 
     override fun appendString(
@@ -404,8 +404,8 @@ private object JavaUint64Serializer : build.skir.PrimitiveSerializer<Long>() {
         out.append(input.toULong()).append("UL")
     }
 
-    override val typeName get() = "uint64"
-    override val typeDescriptor get() = PrimitiveDescriptor.Reflective.JavaUint64
+    override val typeName get() = "hash64"
+    override val typeDescriptor get() = PrimitiveDescriptor.Reflective.JavaHash64
 }
 
 private object Float32Serializer : build.skir.PrimitiveSerializer<Float>() {

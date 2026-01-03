@@ -11,7 +11,7 @@ Library imported from Kotlin and Java code generated from skir files.
 
 ```kotlin
 dependencies {
-    implementation("build.skir:skir-kotlin-client:1.1.4")  // Pick the latest version
+    implementation("build.skir:skir-client:0.0.6")  // Pick the latest version
 }
 ```
 
@@ -19,7 +19,7 @@ dependencies {
 
 ```groovy
 dependencies {
-    implementation 'build.skir:skir-kotlin-client:1.1.4'  // Pick the latest version
+    implementation 'build.skir:skir-client:0.0.6'  // Pick the latest version
 }
 ```
 

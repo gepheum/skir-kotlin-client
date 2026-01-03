@@ -116,7 +116,7 @@ fun decodeUnused(buffer: BufferedSource): Long {
             buffer.skip(4)
             return 5
         }
-        2, 6, 7, 9 -> { // uint64, int64, uint64 timestamp, float64
+        2, 6, 7, 9 -> { // uint64, int64, int64 timestamp, float64
             buffer.skip(8)
             return 9
         }

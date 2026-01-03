@@ -100,7 +100,7 @@ private fun parseTypeDescriptorImpl(
                 "bool" -> build.skir.Serializers.bool.typeDescriptor.notReflective
                 "int32" -> build.skir.Serializers.int32.typeDescriptor.notReflective
                 "int64" -> build.skir.Serializers.int64.typeDescriptor.notReflective
-                "uint64" -> build.skir.Serializers.uint64.typeDescriptor.notReflective
+                "hash64" -> build.skir.Serializers.hash64.typeDescriptor.notReflective
                 "float32" -> build.skir.Serializers.float32.typeDescriptor.notReflective
                 "float64" -> build.skir.Serializers.float64.typeDescriptor.notReflective
                 "timestamp" -> build.skir.Serializers.timestamp.typeDescriptor.notReflective

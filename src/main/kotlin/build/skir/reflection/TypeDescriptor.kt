@@ -139,12 +139,12 @@ class PrimitiveDescriptor private constructor(override val primitiveType: Primit
                 get() = PrimitiveType.INT_64
         }
 
-        object Uint64 : Reflective<ULong> {
+        object Hash64 : Reflective<ULong> {
             override val primitiveType: PrimitiveType
                 get() = PrimitiveType.UINT_64
         }
 
-        object JavaUint64 : Reflective<Long> {
+        object JavaHash64 : Reflective<Long> {
             override val primitiveType: PrimitiveType
                 get() = PrimitiveType.UINT_64
         }
@@ -717,7 +717,7 @@ private fun getTypeSignature(typeDescriptor: TypeDescriptor): JsonObject {
                                 PrimitiveType.BOOL -> "bool"
                                 PrimitiveType.INT_32 -> "int32"
                                 PrimitiveType.INT_64 -> "int64"
-                                PrimitiveType.UINT_64 -> "uint64"
+                                PrimitiveType.UINT_64 -> "hash64"
                                 PrimitiveType.FLOAT_32 -> "float32"
                                 PrimitiveType.FLOAT_64 -> "float64"
                                 PrimitiveType.TIMESTAMP -> "timestamp"

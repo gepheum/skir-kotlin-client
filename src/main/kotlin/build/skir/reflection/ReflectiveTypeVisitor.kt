@@ -69,10 +69,10 @@ interface ReflectiveTypeVisitor<T> {
     fun visitInt64(equivalence: TypeEquivalence<T, Long>)
 
     /** Visits a 64-bit unsigned integer primitive type. */
-    fun visitUint64(equivalence: TypeEquivalence<T, ULong>)
+    fun visitHash64(equivalence: TypeEquivalence<T, ULong>)
 
     /** Visits a 64-bit unsigned integer primitive type (Java compatible). */
-    fun visitJavaUint64(equivalence: TypeEquivalence<T, Long>)
+    fun visitJavaHash64(equivalence: TypeEquivalence<T, Long>)
 
     /** Visits a 32-bit floating point primitive type. */
     fun visitFloat32(equivalence: TypeEquivalence<T, Float>)
@@ -133,10 +133,10 @@ interface ReflectiveTypeVisitor<T> {
         override fun visitInt64(equivalence: TypeEquivalence<T, Long>) {
         }
 
-        override fun visitUint64(equivalence: TypeEquivalence<T, ULong>) {
+        override fun visitHash64(equivalence: TypeEquivalence<T, ULong>) {
         }
 
-        override fun visitJavaUint64(equivalence: TypeEquivalence<T, Long>) {
+        override fun visitJavaHash64(equivalence: TypeEquivalence<T, Long>) {
         }
 
         override fun visitFloat32(equivalence: TypeEquivalence<T, Float>) {
@@ -202,11 +202,11 @@ interface ReflectiveTypeVisitor<T> {
                 PrimitiveDescriptor.Reflective.Int64 -> {
                     visitor.visitInt64(TypeEquivalence.get())
                 }
-                PrimitiveDescriptor.Reflective.Uint64 -> {
-                    visitor.visitUint64(TypeEquivalence.get())
+                PrimitiveDescriptor.Reflective.Hash64 -> {
+                    visitor.visitHash64(TypeEquivalence.get())
                 }
-                PrimitiveDescriptor.Reflective.JavaUint64 -> {
-                    visitor.visitJavaUint64(TypeEquivalence.get())
+                PrimitiveDescriptor.Reflective.JavaHash64 -> {
+                    visitor.visitJavaHash64(TypeEquivalence.get())
                 }
                 PrimitiveDescriptor.Reflective.Float32 -> {
                     visitor.visitFloat32(TypeEquivalence.get())

@@ -57,8 +57,8 @@ class SerializersTest {
 
         assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.int32.toBytes(100))).isEqualTo(true)
         assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.float32.toBytes(3.14F))).isEqualTo(true)
-        assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.uint64.toBytes(10000000000000000UL))).isEqualTo(true)
-        assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.uint64.toBytes(0UL))).isEqualTo(false)
+        assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.hash64.toBytes(10000000000000000UL))).isEqualTo(true)
+        assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.hash64.toBytes(0UL))).isEqualTo(false)
         assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.int64.toBytes(-1))).isEqualTo(true)
     }
 
@@ -102,16 +102,16 @@ class SerializersTest {
     }
 
     @Test
-    fun `test uint64 serializer`() {
+    fun `test hash64 serializer`() {
         val values = listOf(0UL, 1UL, 42UL, ULong.MAX_VALUE)
 
         for (value in values) {
-            val jsonCode = build.skir.Serializers.uint64.toJsonCode(value)
-            val restored = build.skir.Serializers.uint64.fromJsonCode(jsonCode)
+            val jsonCode = build.skir.Serializers.hash64.toJsonCode(value)
+            val restored = build.skir.Serializers.hash64.fromJsonCode(jsonCode)
             assertThat(restored).isEqualTo(value)
 
-            val bytes = build.skir.Serializers.uint64.toBytes(value)
-            val restoredFromBytes = build.skir.Serializers.uint64.fromBytes(bytes.toByteArray())
+            val bytes = build.skir.Serializers.hash64.toBytes(value)
+            val restoredFromBytes = build.skir.Serializers.hash64.fromBytes(bytes.toByteArray())
             assertThat(restoredFromBytes).isEqualTo(value)
         }
     }
@@ -366,7 +366,7 @@ class SerializersTest {
                 build.skir.Serializers.bool to true,
                 build.skir.Serializers.int32 to -42,
                 build.skir.Serializers.int64 to 123456789L,
-                build.skir.Serializers.uint64 to 987654321UL,
+                build.skir.Serializers.hash64 to 987654321UL,
                 build.skir.Serializers.float32 to 3.14f,
                 build.skir.Serializers.float64 to 2.71828,
                 build.skir.Serializers.string to "test string",
@@ -489,21 +489,21 @@ class SerializersTest {
     }
 
     @Test
-    fun `test uint64 large number json serialization`() {
+    fun `test hash64 large number json serialization`() {
         // Test JavaScript safe integer boundaries for unsigned values
         val safeValue = 123456789UL
-        val safeJson = build.skir.Serializers.uint64.toJsonCode(safeValue)
+        val safeJson = build.skir.Serializers.hash64.toJsonCode(safeValue)
         assertThat(safeJson).isEqualTo("123456789")
 
         // Values outside safe range should be strings
         val unsafeValue = ULong.MAX_VALUE
-        val unsafeJson = build.skir.Serializers.uint64.toJsonCode(unsafeValue)
+        val unsafeJson = build.skir.Serializers.hash64.toJsonCode(unsafeValue)
         assertThat(unsafeJson).startsWith("\"")
         assertThat(unsafeJson).endsWith("\"")
 
         // Both should roundtrip correctly
-        assertThat(build.skir.Serializers.uint64.fromJsonCode(safeJson)).isEqualTo(safeValue)
-        assertThat(build.skir.Serializers.uint64.fromJsonCode(unsafeJson)).isEqualTo(unsafeValue)
+        assertThat(build.skir.Serializers.hash64.fromJsonCode(safeJson)).isEqualTo(safeValue)
+        assertThat(build.skir.Serializers.hash64.fromJsonCode(unsafeJson)).isEqualTo(unsafeValue)
     }
 
     @Test
@@ -599,7 +599,7 @@ class SerializersTest {
                 build.skir.Serializers.bool to false,
                 build.skir.Serializers.int32 to 0,
                 build.skir.Serializers.int64 to 0L,
-                build.skir.Serializers.uint64 to 0UL,
+                build.skir.Serializers.hash64 to 0UL,
                 build.skir.Serializers.float32 to 0.0f,
                 build.skir.Serializers.float64 to 0.0,
                 build.skir.Serializers.string to "",
@@ -862,7 +862,7 @@ class SerializersTest {
                 "bool" to build.skir.Serializers.optional(build.skir.Serializers.bool),
                 "int32" to build.skir.Serializers.optional(build.skir.Serializers.int32),
                 "int64" to build.skir.Serializers.optional(build.skir.Serializers.int64),
-                "uint64" to build.skir.Serializers.optional(build.skir.Serializers.uint64),
+                "hash64" to build.skir.Serializers.optional(build.skir.Serializers.hash64),
                 "float32" to build.skir.Serializers.optional(build.skir.Serializers.float32),
                 "float64" to build.skir.Serializers.optional(build.skir.Serializers.float64),
                 "string" to build.skir.Serializers.optional(build.skir.Serializers.string),
@@ -875,7 +875,7 @@ class SerializersTest {
                 "bool" to listOf(true, false, null),
                 "int32" to listOf(0, 42, -1, Int.MAX_VALUE, Int.MIN_VALUE, null),
                 "int64" to listOf(0L, 42L, -1L, Long.MAX_VALUE, Long.MIN_VALUE, null),
-                "uint64" to listOf(0UL, 42UL, ULong.MAX_VALUE, null),
+                "hash64" to listOf(0UL, 42UL, ULong.MAX_VALUE, null),
                 "float32" to listOf(0.0f, 3.14f, Float.NaN, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, null),
                 "float64" to listOf(0.0, 3.14159, Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, null),
                 "string" to listOf("", "hello", "world", "🚀", null),
@@ -1039,7 +1039,7 @@ class SerializersTest {
         val boolArraySerializer = build.skir.Serializers.list(build.skir.Serializers.bool)
         val int32ArraySerializer = build.skir.Serializers.list(build.skir.Serializers.int32)
         val int64ArraySerializer = build.skir.Serializers.list(build.skir.Serializers.int64)
-        val uint64ArraySerializer = build.skir.Serializers.list(build.skir.Serializers.uint64)
+        val hash64ArraySerializer = build.skir.Serializers.list(build.skir.Serializers.hash64)
         val float32ArraySerializer = build.skir.Serializers.list(build.skir.Serializers.float32)
         val float64ArraySerializer = build.skir.Serializers.list(build.skir.Serializers.float64)
         val stringArraySerializer = build.skir.Serializers.list(build.skir.Serializers.string)
@@ -1050,7 +1050,7 @@ class SerializersTest {
         val boolArray = listOf(true, false, true)
         val int32Array = listOf(0, -1, 42, Int.MAX_VALUE, Int.MIN_VALUE)
         val int64Array = listOf(0L, -1L, 42L, Long.MAX_VALUE, Long.MIN_VALUE)
-        val uint64Array = listOf(0UL, 1UL, 42UL, ULong.MAX_VALUE)
+        val hash64Array = listOf(0UL, 1UL, 42UL, ULong.MAX_VALUE)
         val float32Array = listOf(0.0f, 1.0f, -1.0f, 3.14f, Float.NaN, Float.POSITIVE_INFINITY)
         val float64Array = listOf(0.0, 1.0, -1.0, 3.14159, Double.NaN, Double.NEGATIVE_INFINITY)
         val stringArray = listOf("", "hello", "world", "🚀", "Hello, 世界!")
@@ -1062,7 +1062,7 @@ class SerializersTest {
                 Triple(boolArraySerializer, boolArray, "bool"),
                 Triple(int32ArraySerializer, int32Array, "int32"),
                 Triple(int64ArraySerializer, int64Array, "int64"),
-                Triple(uint64ArraySerializer, uint64Array, "uint64"),
+                Triple(hash64ArraySerializer, hash64Array, "hash64"),
                 Triple(float32ArraySerializer, float32Array, "float32"),
                 Triple(float64ArraySerializer, float64Array, "float64"),
                 Triple(stringArraySerializer, stringArray, "string"),
@@ -1306,8 +1306,8 @@ class SerializersTest {
     }
 
     @Test
-    fun `test toStringImpl - uint64`() {
-        assertThat(toStringImpl(2UL, build.skir.Serializers.uint64.impl)).isEqualTo("2UL")
+    fun `test toStringImpl - hash64`() {
+        assertThat(toStringImpl(2UL, build.skir.Serializers.hash64.impl)).isEqualTo("2UL")
     }
 
     @Test
