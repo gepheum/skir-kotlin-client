@@ -4,7 +4,7 @@ package build.skir.service
  * Information about an error thrown during the execution of a method on the
  * server side.
  */
-data class MethodErrorInfo<RequestMeta, Request>(
+data class MethodErrorInfo<out RequestMeta, Request>(
     /** The exception that was thrown. */
     @get:JvmName("error")
     val error: Throwable,

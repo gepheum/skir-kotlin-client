@@ -16,7 +16,7 @@ import java.net.URI
  * @param RequestMeta A custom type containing the information you wish to pass
  *     from the HTTP request (typically headers) to your service methods.
  */
-class Service<RequestMeta> private constructor(private val impl: Impl<RequestMeta>) {
+class Service<in RequestMeta> private constructor(private val impl: Impl<RequestMeta>) {
     /**
      * Parses the content of a user request and invokes the appropriate method.
      *
@@ -53,14 +53,14 @@ class Service<RequestMeta> private constructor(private val impl: Impl<RequestMet
         }
     }
 
-    internal data class ServiceOptions<RequestMeta>(
+    private data class ServiceOptions<in RequestMeta>(
         val keepUnrecognizedValues: Boolean = false,
         val canSendUnknownErrorMessage: (MethodErrorInfo<RequestMeta, *>) -> Boolean,
         val errorLogger: (MethodErrorInfo<RequestMeta, *>) -> Unit,
         val studioAppJsUrl: String,
     )
 
-    private data class MethodImpl<Request, Response, RequestMeta>(
+    private data class MethodImpl<Request, Response, in RequestMeta>(
         val method: Method<Request, Response>,
         val impl: suspend (req: Request, requestMeta: RequestMeta) -> Response,
     )
@@ -193,7 +193,7 @@ class Service<RequestMeta> private constructor(private val impl: Impl<RequestMet
             )
     }
 
-    private class Impl<RequestMeta>(
+    private class Impl<in RequestMeta>(
         val methodImpls: Map<Long, MethodImpl<*, *, RequestMeta>>,
         val options: ServiceOptions<RequestMeta>,
     ) {
