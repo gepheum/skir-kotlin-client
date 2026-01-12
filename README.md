@@ -29,7 +29,7 @@ dependencies {
 <dependency>
     <groupId>build.skir</groupId>
     <artifactId>skir-kotlin-client</artifactId>
-    <version>latest.release</version>
+    <version>1.0.0<!-- Pick the latest version --></version>
 </dependency>
 ```
 
