@@ -1,4 +1,4 @@
-[![Maven Central](https://img.shields.io/maven-central/v/build.skir/skir-kotlin-client)](https://central.sonatype.com/artifact/build.skir/skir-kotlin-client)
+[![Maven Central](https://img.shields.io/maven-central/v/build.skir/skir-client)](https://central.sonatype.com/artifact/build.skir/skir-client)
 [![build](https://github.com/gepheum/skir-kotlin-client/workflows/Build/badge.svg)](https://github.com/gepheum/skir-kotlin-client/actions)
 
 # Skir Kotlin Client
