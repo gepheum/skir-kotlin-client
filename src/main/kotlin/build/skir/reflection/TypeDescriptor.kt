@@ -122,7 +122,9 @@ interface PrimitiveDescriptorBase : TypeDescriptorBase {
 }
 
 /** Describes a primitive type such as integers, strings, booleans, etc. */
-class PrimitiveDescriptor private constructor(override val primitiveType: PrimitiveType) : PrimitiveDescriptorBase, TypeDescriptor {
+class PrimitiveDescriptor private constructor(
+    override val primitiveType: PrimitiveType,
+) : PrimitiveDescriptorBase, TypeDescriptor {
     sealed interface Reflective<T> : PrimitiveDescriptorBase, TypeDescriptor.Reflective<T> {
         object Bool : Reflective<Boolean> {
             override val primitiveType: PrimitiveType
@@ -205,7 +207,8 @@ class OptionalDescriptor internal constructor(
      * The value type on the JVM side is `T?`.
      * Preferred in Kotlin over [OptionalDescriptor.JavaReflective].
      */
-    interface Reflective<T : Any> : OptionalDescriptorBase<TypeDescriptor.Reflective<T>>, TypeDescriptor.Reflective<T?> {
+    interface Reflective<T : Any> :
+        OptionalDescriptorBase<TypeDescriptor.Reflective<T>>, TypeDescriptor.Reflective<T?> {
         /**
          * Transforms the wrapped value if present, preserving null values.
          */
@@ -261,7 +264,8 @@ class ArrayDescriptor internal constructor(
     override val keyProperty: String?,
 ) : ArrayDescriptorBase<TypeDescriptor>, TypeDescriptor {
     /** Adds runtime introspection capabilities to a [ArrayDescriptor]. */
-    interface Reflective<E, L : List<E>> : ArrayDescriptorBase<TypeDescriptor.Reflective<E>>, TypeDescriptor.Reflective<L> {
+    interface Reflective<E, L : List<E>> :
+        ArrayDescriptorBase<TypeDescriptor.Reflective<E>>, TypeDescriptor.Reflective<L> {
         /** Converts the given list to the specific list type L. */
         fun toList(list: List<E>): L
 
@@ -502,7 +506,8 @@ class EnumWrapperVariant internal constructor(
      * @param Enum The enum type
      * @param Value The type of the associated value
      */
-    interface Reflective<Enum, Value> : EnumWrapperVariantBase<TypeDescriptor.Reflective<Value>>, EnumVariant.Reflective<Enum> {
+    interface Reflective<Enum, Value> :
+        EnumWrapperVariantBase<TypeDescriptor.Reflective<Value>>, EnumVariant.Reflective<Enum> {
         /** Returns whether the variant of the given enum instance matches this variant. */
         fun test(e: Enum): Boolean
 
@@ -794,7 +799,10 @@ private fun addRecordDefinitions(
                             },
                         ),
                     )
-                    .putUnlessEmpty("removed_numbers", JsonArray(typeDescriptor.removedNumbers.map { JsonPrimitive(it) }))
+                    .putUnlessEmpty(
+                        "removed_numbers",
+                        JsonArray(typeDescriptor.removedNumbers.map { JsonPrimitive(it) }),
+                    )
                     .build()
             recordIdToDefinition[recordId] = JsonObject(recordDefinition)
             val dependencies = typeDescriptor.fields.map { it.type }
@@ -819,13 +827,19 @@ private fun addRecordDefinitions(
                                 JsonObjectBuilder()
                                     .put("name", JsonPrimitive(it.name))
                                     .put("number", JsonPrimitive(it.number))
-                                    .putUnlessEmpty("type", if (it is EnumWrapperVariant) getTypeSignature(it.type) else JsonPrimitive(""))
+                                    .putUnlessEmpty(
+                                        "type",
+                                        if (it is EnumWrapperVariant) getTypeSignature(it.type) else JsonPrimitive(""),
+                                    )
                                     .putUnlessEmpty("doc", JsonPrimitive(it.doc))
                                     .build()
                             },
                         ),
                     )
-                    .putUnlessEmpty("removed_numbers", JsonArray(typeDescriptor.removedNumbers.map { JsonPrimitive(it) }))
+                    .putUnlessEmpty(
+                        "removed_numbers",
+                        JsonArray(typeDescriptor.removedNumbers.map { JsonPrimitive(it) }),
+                    )
                     .build()
             recordIdToDefinition[recordId] = JsonObject(recordDefinition)
             val dependencies = typeDescriptor.variants.mapNotNull { (it as? EnumWrapperVariant)?.type }

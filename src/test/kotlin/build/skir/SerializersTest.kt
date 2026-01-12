@@ -22,9 +22,13 @@ class SerializersTest {
     @Test
     fun `test bool serializer - basic functionality`() {
         // Test true value - should be 1 in dense, true in readable
-        assertThat((build.skir.Serializers.bool.toJson(false, JsonFlavor.READABLE).jsonPrimitive.content)).isEqualTo("false")
+        assertThat(
+            (build.skir.Serializers.bool.toJson(false, JsonFlavor.READABLE).jsonPrimitive.content),
+        ).isEqualTo("false")
         assertThat((build.skir.Serializers.bool.toJson(false).jsonPrimitive.content)).isEqualTo("0")
-        assertThat((build.skir.Serializers.bool.toJson(true, JsonFlavor.READABLE).jsonPrimitive.content)).isEqualTo("true")
+        assertThat(
+            (build.skir.Serializers.bool.toJson(true, JsonFlavor.READABLE).jsonPrimitive.content),
+        ).isEqualTo("true")
         assertThat((build.skir.Serializers.bool.toJson(true).jsonPrimitive.content)).isEqualTo("1")
 
         // Test round-trip
@@ -57,7 +61,9 @@ class SerializersTest {
 
         assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.int32.toBytes(100))).isEqualTo(true)
         assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.float32.toBytes(3.14F))).isEqualTo(true)
-        assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.hash64.toBytes(10000000000000000UL))).isEqualTo(true)
+        assertThat(
+            build.skir.Serializers.bool.fromBytes(build.skir.Serializers.hash64.toBytes(10000000000000000UL)),
+        ).isEqualTo(true)
         assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.hash64.toBytes(0UL))).isEqualTo(false)
         assertThat(build.skir.Serializers.bool.fromBytes(build.skir.Serializers.int64.toBytes(-1))).isEqualTo(true)
     }
@@ -198,7 +204,8 @@ class SerializersTest {
                 "Hello, 世界!",
                 "🚀",
                 "\n\t\r",
-                "A very long string that exceeds normal buffer sizes and should test the streaming capabilities of the serializer properly",
+                "A very long string that exceeds normal buffer sizes and should " +
+                    "test the streaming capabilities of the serializer properly",
             )
 
         for (value in values) {
@@ -1314,16 +1321,24 @@ class SerializersTest {
     fun `test toStringImpl - float32`() {
         assertThat(toStringImpl(3.14F, build.skir.Serializers.float32.impl)).isEqualTo("3.14F")
         assertThat(toStringImpl(Float.NaN, build.skir.Serializers.float32.impl)).isEqualTo("Float.NaN")
-        assertThat(toStringImpl(Float.POSITIVE_INFINITY, build.skir.Serializers.float32.impl)).isEqualTo("Float.POSITIVE_INFINITY")
-        assertThat(toStringImpl(Float.NEGATIVE_INFINITY, build.skir.Serializers.float32.impl)).isEqualTo("Float.NEGATIVE_INFINITY")
+        assertThat(
+            toStringImpl(Float.POSITIVE_INFINITY, build.skir.Serializers.float32.impl),
+        ).isEqualTo("Float.POSITIVE_INFINITY")
+        assertThat(
+            toStringImpl(Float.NEGATIVE_INFINITY, build.skir.Serializers.float32.impl),
+        ).isEqualTo("Float.NEGATIVE_INFINITY")
     }
 
     @Test
     fun `test toStringImpl - float64`() {
         assertThat(toStringImpl(3.14, build.skir.Serializers.float64.impl)).isEqualTo("3.14")
         assertThat(toStringImpl(Double.NaN, build.skir.Serializers.float64.impl)).isEqualTo("Double.NaN")
-        assertThat(toStringImpl(Double.POSITIVE_INFINITY, build.skir.Serializers.float64.impl)).isEqualTo("Double.POSITIVE_INFINITY")
-        assertThat(toStringImpl(Double.NEGATIVE_INFINITY, build.skir.Serializers.float64.impl)).isEqualTo("Double.NEGATIVE_INFINITY")
+        assertThat(
+            toStringImpl(Double.POSITIVE_INFINITY, build.skir.Serializers.float64.impl),
+        ).isEqualTo("Double.POSITIVE_INFINITY")
+        assertThat(
+            toStringImpl(Double.NEGATIVE_INFINITY, build.skir.Serializers.float64.impl),
+        ).isEqualTo("Double.NEGATIVE_INFINITY")
     }
 
     @Test
@@ -1357,13 +1372,19 @@ class SerializersTest {
     @Test
     fun `test toStringImpl - bytes`() {
         assertThat(toStringImpl(okio.ByteString.EMPTY, build.skir.Serializers.bytes.impl)).isEqualTo("\"\".decodeHex()")
-        assertThat(toStringImpl("abcd".decodeHex(), build.skir.Serializers.bytes.impl)).isEqualTo("\"abcd\".decodeHex()")
+        assertThat(
+            toStringImpl("abcd".decodeHex(), build.skir.Serializers.bytes.impl),
+        ).isEqualTo("\"abcd\".decodeHex()")
     }
 
     @Test
     fun `test toStringImpl - optional`() {
-        assertThat(toStringImpl(null, build.skir.Serializers.optional(build.skir.Serializers.bool).impl)).isEqualTo("null")
-        assertThat(toStringImpl(true, build.skir.Serializers.optional(build.skir.Serializers.bool).impl)).isEqualTo("true")
+        assertThat(
+            toStringImpl(null, build.skir.Serializers.optional(build.skir.Serializers.bool).impl),
+        ).isEqualTo("null")
+        assertThat(
+            toStringImpl(true, build.skir.Serializers.optional(build.skir.Serializers.bool).impl),
+        ).isEqualTo("true")
     }
 
     @Test

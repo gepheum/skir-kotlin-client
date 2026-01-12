@@ -8,72 +8,71 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import java.net.http.HttpHeaders
+import java.net.URI
 
 /**
- * Implementation of a skir service.
+ * Implementation of a Skir service.
+ *
+ * @param RequestMeta A custom type containing the information you wish to pass
+ *     from the HTTP request (typically headers) to your service methods.
  */
-class Service private constructor(private val impl: Impl<*>) {
+class Service<RequestMeta> private constructor(private val impl: Impl<RequestMeta>) {
     /**
      * Parses the content of a user request and invokes the appropriate method.
      *
      * If the request is a GET request, pass in the decoded query string as the
-     * request's body. The query string is the part of the URL after '?', and it
-     * can be decoded with DecodeURIComponent.
-     *
-     * Pass in [UnrecognizedValuesPolicy.KEEP] if the request cannot come from a
-     * malicious user.
+     * request's body. The query string is the part of the URL after '?'.
      */
     suspend fun handleRequest(
         requestBody: String,
-        requestHeaders: HttpHeaders,
-        unrecognizedValues: UnrecognizedValuesPolicy,
+        requestMeta: RequestMeta,
     ): RawResponse {
-        return impl.handleRequest(requestBody, requestHeaders, unrecognizedValues)
+        return impl.handleRequest(requestBody, requestMeta)
     }
 
     /** Raw response returned by the server. */
     data class RawResponse(
         @get:JvmName("data")
         val data: String,
-        @get:JvmName("type")
-        val type: ResponseType,
-    ) {
-        enum class ResponseType {
-            OK_JSON,
-            OK_HTML,
-            BAD_REQUEST,
-            SERVER_ERROR,
-        }
-
         @get:JvmName("statusCode")
-        val statusCode: Int
-            get() =
-                when (type) {
-                    ResponseType.OK_JSON, ResponseType.OK_HTML -> 200
-                    ResponseType.BAD_REQUEST -> 400
-                    ResponseType.SERVER_ERROR -> 500
-                }
-
+        val statusCode: Int,
         @get:JvmName("contentType")
-        val contentType: String
-            get() =
-                when (type) {
-                    ResponseType.OK_JSON -> "application/json"
-                    ResponseType.OK_HTML -> "text/html; charset=utf-8"
-                    ResponseType.BAD_REQUEST, ResponseType.SERVER_ERROR -> "text/plain; charset=utf-8"
-                }
+        val contentType: String,
+    ) {
+        companion object {
+            internal fun okJson(data: String) = RawResponse(data, 200, "application/json")
+
+            internal fun okHtml(data: String) = RawResponse(data, 200, "text/html; charset=utf-8")
+
+            internal fun badRequest(data: String) = RawResponse(data, 400, "text/plain; charset=utf-8")
+
+            internal fun serverError(
+                data: String,
+                statusCode: Int = 500,
+            ) = RawResponse(data, statusCode, "text/plain; charset=utf-8")
+        }
     }
+
+    internal data class ServiceOptions<RequestMeta>(
+        val keepUnrecognizedValues: Boolean = false,
+        val canSendUnknownErrorMessage: (MethodErrorInfo<RequestMeta, *>) -> Boolean,
+        val errorLogger: (MethodErrorInfo<RequestMeta, *>) -> Unit,
+        val studioAppJsUrl: String,
+    )
 
     private data class MethodImpl<Request, Response, RequestMeta>(
         val method: Method<Request, Response>,
         val impl: suspend (req: Request, requestMeta: RequestMeta) -> Response,
     )
 
-    class Builder<RequestMeta> internal constructor(
-        private val getRequestMeta: (HttpHeaders) -> RequestMeta,
-    ) {
+    class Builder<RequestMeta> internal constructor() {
         private val methodImpls: MutableMap<Long, MethodImpl<*, *, RequestMeta>> = mutableMapOf()
+        private var keepUnrecognizedValues = false
+        private var canSendUnknownErrorMessage: (MethodErrorInfo<RequestMeta, *>) -> Boolean = { false }
+        private var errorLogger: (MethodErrorInfo<RequestMeta, *>) -> Unit = { errorContext ->
+            System.err.println("Error in method ${errorContext.method.name}: ${errorContext.error}")
+        }
+        private var studioAppJsUrl = "https://cdn.jsdelivr.net/npm/skir-studio/dist/skir-studio-standalone.js"
 
         /**
          * Registers the implementation of a method.
@@ -92,12 +91,100 @@ class Service private constructor(private val impl: Impl<*>) {
             return this
         }
 
-        fun build() = Service(Impl(getRequestMeta, methodImpls.toMap()))
+        /**
+         * Whether to keep unrecognized values when deserializing requests.
+         *
+         * Only enable this for data from trusted sources. Malicious actors could
+         * inject fields with IDs not yet defined in your schema. If you preserve
+         * this data and later define those IDs in a future schema version, the
+         * injected data could be deserialized as valid fields, leading to security
+         * vulnerabilities or data corruption.
+         */
+        fun setKeepUnrecognizedValues(keepUnrecognizedValues: Boolean): Builder<RequestMeta> {
+            this.keepUnrecognizedValues = keepUnrecognizedValues
+            return this
+        }
+
+        /**
+         * Determines whether the message of an unknown error (i.e. not a
+         * [ServiceException]) can be sent to the client in the response body.
+         * Can help with debugging.
+         *
+         * By default, unknown errors are masked and the client receives a generic
+         * 'server error' message with status 500. This is to prevent leaking
+         * sensitive information to the client.
+         *
+         * You can enable this if your server is internal or if you are sure that
+         * your error messages are safe to expose.
+         */
+        fun setCanSendUnknownErrorMessage(canSendUnknownErrorMessage: Boolean): Builder<RequestMeta> {
+            return setCanSendUnknownErrorMessage({ canSendUnknownErrorMessage })
+        }
+
+        /**
+         * A predicate which determines whether the message of an unknown error (i.e.
+         * not a [ServiceException]) can be sent to the client in the response body.
+         * Can help with debugging.
+         *
+         * By default, unknown errors are masked and the client receives a generic
+         * 'server error' message with status 500. This is to prevent leaking
+         * sensitive information to the client.
+         *
+         * You can enable this if your server is internal or if you are sure that
+         * your error messages are safe to expose. By passing a predicate instead of
+         * true or false, you can control on a per-error basis whether to expose the
+         * error message; for example, you can send error messages only if the user
+         * is an admin.
+         */
+        fun setCanSendUnknownErrorMessage(
+            canSendUnknownErrorMessage: (MethodErrorInfo<RequestMeta, *>) -> Boolean,
+        ): Builder<RequestMeta> {
+            this.canSendUnknownErrorMessage = canSendUnknownErrorMessage
+            return this
+        }
+
+        /**
+         * Callback invoked whenever an error is thrown during method execution.
+         *
+         * Use this to log errors for monitoring, debugging, or alerting purposes.
+         *
+         * Defaults to a function which prints the method name and error message to
+         * stderr.
+         */
+        fun setErrorLogger(errorLogger: (MethodErrorInfo<RequestMeta, *>) -> Unit): Builder<RequestMeta> {
+            this.errorLogger = errorLogger
+            return this
+        }
+
+        /**
+         * URL to the JavaScript file for the Skir Studio app.
+         *
+         * Skir Studio is a web interface for exploring and testing your Skir
+         * service. It is served when the service receives a request at
+         * '${serviceUrl}?studio'.
+         */
+        fun setStudioAppJsUrl(studioAppJsUrl: String): Builder<RequestMeta> {
+            this.studioAppJsUrl = URI(studioAppJsUrl).toString()
+            return this
+        }
+
+        fun build() =
+            Service<RequestMeta>(
+                Impl(
+                    methodImpls.toMap(),
+                    ServiceOptions(
+                        keepUnrecognizedValues,
+                        canSendUnknownErrorMessage,
+                        errorLogger,
+                        studioAppJsUrl,
+                    ),
+                ),
+            )
     }
 
     private class Impl<RequestMeta>(
-        val getRequestMeta: (HttpHeaders) -> RequestMeta,
         val methodImpls: Map<Long, MethodImpl<*, *, RequestMeta>>,
+        val options: ServiceOptions<RequestMeta>,
     ) {
         private fun getMethodNumberByName(methodName: String): Long? {
             val nameMatches = methodImpls.values.filter { it.method.name == methodName }
@@ -110,8 +197,7 @@ class Service private constructor(private val impl: Impl<*>) {
 
         suspend fun handleRequest(
             requestBody: String,
-            requestHeaders: HttpHeaders,
-            unrecognizedValues: UnrecognizedValuesPolicy,
+            requestMeta: RequestMeta,
         ): RawResponse {
             if (requestBody.isEmpty() || requestBody == "list") {
                 val methodsData =
@@ -129,9 +215,9 @@ class Service private constructor(private val impl: Impl<*>) {
                 val json = JsonObject(mapOf("methods" to methodsData))
                 val jsonCode =
                     formatReadableJson(json)
-                return RawResponse(jsonCode, RawResponse.ResponseType.OK_JSON)
-            } else if (requestBody == "debug" || requestBody == "restudio") {
-                return RawResponse(RESTUDIO_HTML, RawResponse.ResponseType.OK_HTML)
+                return RawResponse.okJson(jsonCode)
+            } else if (requestBody == "studio") {
+                return RawResponse.okHtml(getStudioHtml(options.studioAppJsUrl))
             }
 
             // Method invocation
@@ -147,19 +233,17 @@ class Service private constructor(private val impl: Impl<*>) {
                 val reqBodyJson: JsonObject =
                     try {
                         kotlinx.serialization.json.Json.parseToJsonElement(requestBody) as? JsonObject
-                            ?: return RawResponse(
+                            ?: return RawResponse.badRequest(
                                 "bad request: expected JSON object",
-                                RawResponse.ResponseType.BAD_REQUEST,
                             )
                     } catch (e: Exception) {
-                        return RawResponse("bad request: invalid JSON", RawResponse.ResponseType.BAD_REQUEST)
+                        return RawResponse.badRequest("bad request: invalid JSON")
                     }
 
                 val methodField =
                     reqBodyJson["method"]
-                        ?: return RawResponse(
+                        ?: return RawResponse.badRequest(
                             "bad request: missing 'method' field in JSON",
-                            RawResponse.ResponseType.BAD_REQUEST,
                         )
 
                 when (methodField) {
@@ -171,14 +255,13 @@ class Service private constructor(private val impl: Impl<*>) {
                             if (foundNumber == null) {
                                 val nameMatches = methodImpls.values.filter { it.method.name == methodName }
                                 return if (nameMatches.isEmpty()) {
-                                    RawResponse(
+                                    RawResponse.badRequest(
                                         "bad request: method not found: $methodName",
-                                        RawResponse.ResponseType.BAD_REQUEST,
                                     )
                                 } else {
-                                    RawResponse(
-                                        "bad request: method name '$methodName' is ambiguous; use method number instead",
-                                        RawResponse.ResponseType.BAD_REQUEST,
+                                    RawResponse.badRequest(
+                                        "bad request: method name '$methodName' is ambiguous; " +
+                                            "use method number instead",
                                     )
                                 }
                             }
@@ -186,16 +269,14 @@ class Service private constructor(private val impl: Impl<*>) {
                         } else {
                             methodName = "?"
                             methodNumber = methodField.content.toLongOrNull()
-                                ?: return RawResponse(
+                                ?: return RawResponse.badRequest(
                                     "bad request: 'method' field must be a string or an integer",
-                                    RawResponse.ResponseType.BAD_REQUEST,
                                 )
                         }
                     }
                     else -> {
-                        return RawResponse(
+                        return RawResponse.badRequest(
                             "bad request: 'method' field must be a string or an integer",
-                            RawResponse.ResponseType.BAD_REQUEST,
                         )
                     }
                 }
@@ -204,9 +285,8 @@ class Service private constructor(private val impl: Impl<*>) {
 
                 val requestField =
                     reqBodyJson["request"]
-                        ?: return RawResponse(
+                        ?: return RawResponse.badRequest(
                             "bad request: missing 'request' field in JSON",
-                            RawResponse.ResponseType.BAD_REQUEST,
                         )
 
                 requestDataJson = requestField
@@ -216,9 +296,8 @@ class Service private constructor(private val impl: Impl<*>) {
                 val regex = Regex("^([^:]*):([^:]*):([^:]*):(\\S[\\s\\S]*)$")
                 val matchResult =
                     regex.find(requestBody)
-                        ?: return RawResponse(
+                        ?: return RawResponse.badRequest(
                             "bad request: invalid request format",
-                            RawResponse.ResponseType.BAD_REQUEST,
                         )
 
                 val (methodNamePart, methodNumberStr, formatPart, requestDataPart) = matchResult.destructured
@@ -231,9 +310,8 @@ class Service private constructor(private val impl: Impl<*>) {
                 if (methodNumberStr.isNotEmpty()) {
                     val methodNumberRegex = Regex("-?[0-9]+")
                     if (!methodNumberRegex.matches(methodNumberStr)) {
-                        return RawResponse(
+                        return RawResponse.badRequest(
                             "bad request: can't parse method number",
-                            RawResponse.ResponseType.BAD_REQUEST,
                         )
                     }
                     methodNumber = methodNumberStr.toLong()
@@ -243,14 +321,12 @@ class Service private constructor(private val impl: Impl<*>) {
                     if (foundNumber == null) {
                         val nameMatches = methodImpls.values.filter { it.method.name == methodName }
                         return if (nameMatches.isEmpty()) {
-                            RawResponse(
+                            RawResponse.badRequest(
                                 "bad request: method not found: $methodName",
-                                RawResponse.ResponseType.BAD_REQUEST,
                             )
                         } else {
-                            RawResponse(
+                            RawResponse.badRequest(
                                 "bad request: method name '$methodName' is ambiguous; use method number instead",
-                                RawResponse.ResponseType.BAD_REQUEST,
                             )
                         }
                     }
@@ -260,10 +336,16 @@ class Service private constructor(private val impl: Impl<*>) {
 
             val methodImpl =
                 methodImpls[methodNumber]
-                    ?: return RawResponse(
+                    ?: return RawResponse.badRequest(
                         "bad request: method not found: $methodName; number: $methodNumber",
-                        RawResponse.ResponseType.BAD_REQUEST,
                     )
+
+            val unrecognizedValues =
+                if (options.keepUnrecognizedValues) {
+                    UnrecognizedValuesPolicy.KEEP
+                } else {
+                    UnrecognizedValuesPolicy.DROP
+                }
 
             val req: Any? =
                 try {
@@ -273,21 +355,35 @@ class Service private constructor(private val impl: Impl<*>) {
                         methodImpl.method.requestSerializer.fromJson(requestDataJson!!, unrecognizedValues)
                     }
                 } catch (e: Exception) {
-                    return RawResponse(
+                    return RawResponse.badRequest(
                         "bad request: can't parse JSON: ${e.message}",
-                        RawResponse.ResponseType.BAD_REQUEST,
                     )
                 }
 
             val res: Any =
+                @Suppress("UNCHECKED_CAST")
                 try {
-                    @Suppress("UNCHECKED_CAST")
-                    (methodImpl.impl as suspend (Any?, RequestMeta) -> Any)(req, getRequestMeta(requestHeaders))
-                } catch (e: Exception) {
-                    return RawResponse(
-                        "server error: ${e.message}",
-                        RawResponse.ResponseType.SERVER_ERROR,
-                    )
+                    (methodImpl.impl as suspend (Any?, RequestMeta) -> Any)(req, requestMeta)
+                } catch (e: Throwable) {
+                    val errorContext =
+                        MethodErrorInfo(
+                            error = e,
+                            method = methodImpl.method as Method<Any?, *>,
+                            request = req,
+                            requestMeta = requestMeta,
+                        )
+                    options.errorLogger(errorContext)
+                    return if (e is ServiceException) {
+                        e.toRawResponse()
+                    } else {
+                        val message =
+                            if (options.canSendUnknownErrorMessage(errorContext)) {
+                                "server error: ${e.message}"
+                            } else {
+                                "server error"
+                            }
+                        RawResponse.serverError(message)
+                    }
                 }
 
             val resJson: String =
@@ -296,38 +392,41 @@ class Service private constructor(private val impl: Impl<*>) {
                     @Suppress("UNCHECKED_CAST")
                     (methodImpl.method as Method<Any?, Any?>).responseSerializer.toJsonCode(res, jsonFlavor)
                 } catch (e: Exception) {
-                    return RawResponse(
+                    return RawResponse.serverError(
                         "server error: can't serialize response to JSON: ${e.message}",
-                        RawResponse.ResponseType.SERVER_ERROR,
                     )
                 }
 
-            return RawResponse(resJson, RawResponse.ResponseType.OK_JSON)
+            return RawResponse.okJson(resJson)
         }
     }
 
     companion object {
-        fun builder() = Builder<HttpHeaders>({ it })
+        /**
+         * Returns a new [Service.Builder] builder instance.
+         *
+         * @param RequestMeta A custom type containing the information you wish to pass
+         *     from the HTTP request (typically headers) to your service methods.
+         */
+        fun <RequestMeta> builder() = Builder<RequestMeta>()
 
-        fun <RequestMeta> builder(getRequestMeta: (HttpHeaders) -> RequestMeta) =
-            (
-                Builder<RequestMeta>(getRequestMeta)
-            )
-
-        // Copied from
-        //   https://github.com/gepheum/restudio/blob/main/index.jsdeliver.html
-        private const val RESTUDIO_HTML = """<!DOCTYPE html>
+        private fun getStudioHtml(studioAppJsUrl: String): String {
+            // Copied from
+            //   https://github.com/gepheum/skir-studio/blob/main/index.jsdeliver.html
+            // No escaping needed because 'studioAppJsUrl' is validated as a URI
+            return """<!DOCTYPE html>
 
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>RESTudio</title>
-    <script src="https://cdn.jsdelivr.net/npm/restudio/dist/restudio-standalone.js"></script>
+    <title>Skir Studio</title>
+    <script src="$studioAppJsUrl"></script>
   </head>
   <body style="margin: 0; padding: 0;">
-    <restudio-app></restudio-app>
+    <skir-studio-app></skir-studio-app>
   </body>
 </html>
 """
+        }
     }
 }

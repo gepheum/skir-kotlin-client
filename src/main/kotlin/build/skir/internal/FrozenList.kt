@@ -27,7 +27,10 @@ fun <M, E, K> toKeyedList(
     getKey: (E) -> K,
     toFrozen: (M) -> E,
 ): KeyedList<E, K> {
-    return if (elements is KeyedListImpl<*, *> && elements.getKeySpec.isNotEmpty() && elements.getKeySpec == getKeySpec) {
+    return if (elements is KeyedListImpl<*, *> &&
+        elements.getKeySpec.isNotEmpty() &&
+        elements.getKeySpec == getKeySpec
+    ) {
         elements as KeyedList<E, K>
     } else {
         val result = KeyedListImpl(elements.map(toFrozen), getKeySpec, getKey)

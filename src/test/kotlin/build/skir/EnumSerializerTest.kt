@@ -96,7 +96,9 @@ class EnumSerializerTest {
         ).apply {
             addConstantVariant(1, "active", 1, "active status", Status.ACTIVE)
             addConstantVariant(2, "inactive", 2, "", Status.INACTIVE)
-            addWrapperVariant(3, "pending", 3, build.skir.Serializers.string, "pending status", { Status.PendingOption(it) }, { it.reason })
+            addWrapperVariant(3, "pending", 3, build.skir.Serializers.string, "pending status", {
+                Status.PendingOption(it)
+            }, { it.reason })
             addRemovedNumber(4) // Removed field number
             finalizeEnum()
         }
@@ -119,7 +121,9 @@ class EnumSerializerTest {
 
         // Test deserialization from dense format
         assertThat(colorEnumSerializer.fromJson(JsonPrimitive(1), keepUnrecognizedValues = false)).isEqualTo(Color.RED)
-        assertThat(colorEnumSerializer.fromJson(JsonPrimitive(2), keepUnrecognizedValues = false)).isEqualTo(Color.GREEN)
+        assertThat(
+            colorEnumSerializer.fromJson(JsonPrimitive(2), keepUnrecognizedValues = false),
+        ).isEqualTo(Color.GREEN)
         assertThat(colorEnumSerializer.fromJson(JsonPrimitive(3), keepUnrecognizedValues = false)).isEqualTo(Color.BLUE)
     }
 
@@ -137,9 +141,15 @@ class EnumSerializerTest {
         assertThat((blueJson as JsonPrimitive).content).isEqualTo("blue")
 
         // Test deserialization from readable format
-        assertThat(colorEnumSerializer.fromJson(JsonPrimitive("red"), keepUnrecognizedValues = false)).isEqualTo(Color.RED)
-        assertThat(colorEnumSerializer.fromJson(JsonPrimitive("green"), keepUnrecognizedValues = false)).isEqualTo(Color.GREEN)
-        assertThat(colorEnumSerializer.fromJson(JsonPrimitive("blue"), keepUnrecognizedValues = false)).isEqualTo(Color.BLUE)
+        assertThat(
+            colorEnumSerializer.fromJson(JsonPrimitive("red"), keepUnrecognizedValues = false),
+        ).isEqualTo(Color.RED)
+        assertThat(
+            colorEnumSerializer.fromJson(JsonPrimitive("green"), keepUnrecognizedValues = false),
+        ).isEqualTo(Color.GREEN)
+        assertThat(
+            colorEnumSerializer.fromJson(JsonPrimitive("blue"), keepUnrecognizedValues = false),
+        ).isEqualTo(Color.BLUE)
     }
 
     @Test
@@ -270,7 +280,11 @@ class EnumSerializerTest {
         val unknownEnum = (unknownConstant as Color.Unknown).unrecognized
         assertThat(unknownEnum?.bytes).isEqualTo(ByteString.of(10))
 
-        val unknownValue = serializer.fromBytes(byteArrayOf(115, 107, 105, 114, -8, 10, 11), UnrecognizedValuesPolicy.KEEP)
+        val unknownValue =
+            serializer.fromBytes(
+                byteArrayOf(115, 107, 105, 114, -8, 10, 11),
+                UnrecognizedValuesPolicy.KEEP,
+            )
         assertThat(unknownValue).isInstanceOf(Color.Unknown::class.java)
         val unknownValueEnum = (unknownValue as Color.Unknown).unrecognized
         assertThat(unknownValueEnum?.bytes).isEqualTo(ByteString.of(-8, 10, 11))

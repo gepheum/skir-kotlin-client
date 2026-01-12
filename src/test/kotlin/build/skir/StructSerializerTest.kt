@@ -730,7 +730,11 @@ class StructSerializerTest {
         for (i in 1..3) {
             // Full -> Binary -> Partial (with unrecognized fields)
             val fullBytes = personSerializer.toBytes(currentData)
-            val partialPerson = partialPersonSerializer.fromBytes(fullBytes.toByteArray(), UnrecognizedValuesPolicy.KEEP)
+            val partialPerson =
+                partialPersonSerializer.fromBytes(
+                    fullBytes.toByteArray(),
+                    UnrecognizedValuesPolicy.KEEP,
+                )
 
             // Partial -> Binary -> Full (restore from unrecognized fields)
             val partialBytes = partialPersonSerializer.toBytes(partialPerson)

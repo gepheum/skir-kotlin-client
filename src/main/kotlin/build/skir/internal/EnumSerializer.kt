@@ -70,7 +70,20 @@ class EnumSerializer<Enum : Any> private constructor(
     ) {
         checkNotFinalized()
         @Suppress("UNCHECKED_CAST")
-        addVariantImpl(WrapperVariant(number, name, kindOrdinal, valueSerializer, doc, wrap, getValue as (Enum) -> T, getKindOrdinal))
+        addVariantImpl(
+            WrapperVariant(
+                number,
+                name,
+                kindOrdinal,
+                valueSerializer,
+                doc,
+                wrap,
+                getValue as (
+                    Enum,
+                ) -> T,
+                getKindOrdinal,
+            ),
+        )
     }
 
     fun addRemovedNumber(number: Int) {
@@ -331,7 +344,9 @@ class EnumSerializer<Enum : Any> private constructor(
                     is UnknownVariant<Enum> -> unknown.constant
                     is ConstantVariant<Enum> -> variant.constant
                     is RemovedNumber<Enum> -> unknown.constant
-                    is WrapperVariant<Enum, *> -> throw IllegalArgumentException("${variant.number} refers to a wrapper variant")
+                    is WrapperVariant<Enum, *> -> throw IllegalArgumentException(
+                        "${variant.number} refers to a wrapper variant",
+                    )
                     null ->
                         if (keepUnrecognizedValues && number != null) {
                             unknown.wrapUnrecognized(UnrecognizedVariant(json))
@@ -400,7 +415,9 @@ class EnumSerializer<Enum : Any> private constructor(
                 is RemovedNumber -> unknown.constant
                 is UnknownVariant -> unknown.constant
                 is ConstantVariant<Enum> -> variant.constant
-                is WrapperVariant<Enum, *> -> throw IllegalArgumentException("${variant.number} refers to a wrapper variant")
+                is WrapperVariant<Enum, *> -> throw IllegalArgumentException(
+                    "${variant.number} refers to a wrapper variant",
+                )
                 null -> {
                     if (keepUnrecognizedValues) {
                         val bytes = Buffer()
@@ -418,7 +435,9 @@ class EnumSerializer<Enum : Any> private constructor(
                     decodeUnused(buffer)
                     unknown.constant
                 }
-                is UnknownVariant, is ConstantVariant<Enum> -> throw IllegalArgumentException("$number refers to a constant variant")
+                is UnknownVariant, is ConstantVariant<Enum> -> throw IllegalArgumentException(
+                    "$number refers to a constant variant",
+                )
                 is WrapperVariant<Enum, *> ->
                     WrapperVariant.wrapDecoded(
                         variant,
