@@ -99,6 +99,8 @@ class Service<RequestMeta> private constructor(private val impl: Impl<RequestMet
          * this data and later define those IDs in a future schema version, the
          * injected data could be deserialized as valid fields, leading to security
          * vulnerabilities or data corruption.
+         *
+         * @return `this` builder
          */
         fun setKeepUnrecognizedValues(keepUnrecognizedValues: Boolean): Builder<RequestMeta> {
             this.keepUnrecognizedValues = keepUnrecognizedValues
@@ -116,6 +118,8 @@ class Service<RequestMeta> private constructor(private val impl: Impl<RequestMet
          *
          * You can enable this if your server is internal or if you are sure that
          * your error messages are safe to expose.
+         *
+         * @return `this` builder
          */
         fun setCanSendUnknownErrorMessage(canSendUnknownErrorMessage: Boolean): Builder<RequestMeta> {
             return setCanSendUnknownErrorMessage({ canSendUnknownErrorMessage })
@@ -135,6 +139,8 @@ class Service<RequestMeta> private constructor(private val impl: Impl<RequestMet
          * true or false, you can control on a per-error basis whether to expose the
          * error message; for example, you can send error messages only if the user
          * is an admin.
+         *
+         * @return `this` builder
          */
         fun setCanSendUnknownErrorMessage(
             canSendUnknownErrorMessage: (MethodErrorInfo<RequestMeta, *>) -> Boolean,
@@ -150,6 +156,8 @@ class Service<RequestMeta> private constructor(private val impl: Impl<RequestMet
          *
          * Defaults to a function which prints the method name and error message to
          * stderr.
+         *
+         * @return `this` builder
          */
         fun setErrorLogger(errorLogger: (MethodErrorInfo<RequestMeta, *>) -> Unit): Builder<RequestMeta> {
             this.errorLogger = errorLogger
@@ -162,12 +170,15 @@ class Service<RequestMeta> private constructor(private val impl: Impl<RequestMet
          * Skir Studio is a web interface for exploring and testing your Skir
          * service. It is served when the service receives a request at
          * '${serviceUrl}?studio'.
+         *
+         * @return `this` builder
          */
         fun setStudioAppJsUrl(studioAppJsUrl: String): Builder<RequestMeta> {
             this.studioAppJsUrl = URI(studioAppJsUrl).toString()
             return this
         }
 
+        /** Builds the [Service] instance. */
         fun build() =
             Service<RequestMeta>(
                 Impl(
