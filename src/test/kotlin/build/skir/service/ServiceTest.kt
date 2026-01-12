@@ -41,7 +41,7 @@ class ServiceTest {
 
     private val service =
         Service
-            .builder<Meta>()
+            .Builder<Meta>()
             .addMethod(echoMethod) { req, meta ->
                 // Basic implementation using meta
                 "${meta.user}: $req"
@@ -238,7 +238,7 @@ class ServiceTest {
     fun `test internal server error - unmasked`() =
         runBlocking {
             val unsafeService =
-                Service.builder<Meta>()
+                Service.Builder<Meta>()
                     .addMethod(errorMethod) { _, _ -> throw RuntimeException("Secret info") }
                     .setCanSendUnknownErrorMessage(true)
                     .build()
@@ -263,7 +263,7 @@ class ServiceTest {
             var capturedMeta: Meta? = null
 
             val loggingService =
-                Service.builder<Meta>()
+                Service.Builder<Meta>()
                     .addMethod(errorMethod) { _, _ -> throw RuntimeException("Log me") }
                     .setErrorLogger { context ->
                         capturedError = context.error
@@ -295,7 +295,7 @@ class ServiceTest {
             val m2 = Method("dup", 11, Serializers.string, Serializers.string, "")
 
             val ambiguousService =
-                Service.builder<Meta>()
+                Service.Builder<Meta>()
                     .addMethod(m1) { _, _ -> "" }
                     .addMethod(m2) { _, _ -> "" }
                     .build()
@@ -321,7 +321,7 @@ class ServiceTest {
             val m2 = Method("dup", 11, Serializers.string, Serializers.string, "")
 
             val ambiguousService =
-                Service.builder<Meta>()
+                Service.Builder<Meta>()
                     .addMethod(m1) { _, _ -> "one" }
                     .addMethod(m2) { _, _ -> "two" }
                     .build()

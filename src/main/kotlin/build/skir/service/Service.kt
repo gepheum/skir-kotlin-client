@@ -65,7 +65,13 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
         val impl: suspend (req: Request, requestMeta: RequestMeta) -> Response,
     )
 
-    class Builder<RequestMeta> internal constructor() {
+    /**
+     * Builder for creating [Service] instances.
+     *
+     * @param RequestMeta A custom type containing the information you wish to
+     *     pass from the HTTP request (typically headers) to your service methods.
+     */
+    class Builder<RequestMeta> {
         private val methodImpls: MutableMap<Long, MethodImpl<*, *, RequestMeta>> = mutableMapOf()
         private var keepUnrecognizedValues = false
         private var canSendUnknownErrorMessage: (MethodErrorInfo<RequestMeta, *>) -> Boolean = { false }
@@ -413,14 +419,6 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
     }
 
     companion object {
-        /**
-         * Returns a new [Service.Builder] builder instance.
-         *
-         * @param RequestMeta A custom type containing the information you wish to pass
-         *     from the HTTP request (typically headers) to your service methods.
-         */
-        fun <RequestMeta> builder() = Builder<RequestMeta>()
-
         private fun getStudioHtml(studioAppJsUrl: String): String {
             // Copied from
             //   https://github.com/gepheum/skir-studio/blob/main/index.jsdeliver.html
