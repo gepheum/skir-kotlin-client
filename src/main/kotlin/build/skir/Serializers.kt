@@ -805,7 +805,8 @@ private object TimestampSerializer : build.skir.PrimitiveSerializer<Instant>() {
     override val typeDescriptor get() = PrimitiveDescriptor.Reflective.Timestamp
 }
 
-private class OptionalSerializer<T : Any>(val other: SerializerImpl<T>) : SerializerImpl<T?>(), OptionalDescriptor.Reflective<T> {
+private class OptionalSerializer<T : Any>(val other: SerializerImpl<T>) :
+    SerializerImpl<T?>(), OptionalDescriptor.Reflective<T> {
     override fun isDefault(value: T?): Boolean {
         return value == null
     }
