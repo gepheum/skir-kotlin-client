@@ -132,7 +132,7 @@ class EnumSerializer<Enum : Any> private constructor(
     ) : Variant<Enum>(), EnumConstantVariant.Reflective<Enum> {
         override val kindOrdinal = 0
         override val number get() = 0
-        override val name get() = "?"
+        override val name get() = "UNKNOWN"
         override val doc get() = ""
 
         override fun toJson(
@@ -140,7 +140,7 @@ class EnumSerializer<Enum : Any> private constructor(
             readableFlavor: Boolean,
         ): JsonElement {
             return if (readableFlavor) {
-                JsonPrimitive("?")
+                JsonPrimitive("UNKNOWN")
             } else {
                 val unrecognized = getUnrecognized(input)?.jsonElement
                 unrecognized ?: JsonPrimitive(0)
