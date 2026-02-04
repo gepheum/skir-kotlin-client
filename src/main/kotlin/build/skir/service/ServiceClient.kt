@@ -26,6 +26,7 @@ class ServiceClient(
     }
 
     /** Invokes the given method on the remote server through an RPC. */
+    @JvmOverloads
     suspend fun <Request, Response> invokeRemote(
         method: Method<Request, Response>,
         request: Request,
@@ -74,6 +75,7 @@ class ServiceClient(
      * Invokes the given method on the remote server through an RPC.
      * This is a blocking version suitable for calling from Java.
      */
+    @JvmOverloads
     fun <Request, Response> invokeRemoteBlocking(
         method: Method<Request, Response>,
         request: Request,
