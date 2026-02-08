@@ -55,7 +55,7 @@ mavenPublishing {
     coordinates(
         groupId = "build.skir",
         artifactId = "skir-client",
-        version = "1.0.2",
+        version = "1.0.3",
     )
 
     // Configure POM metadata for the published artifact
