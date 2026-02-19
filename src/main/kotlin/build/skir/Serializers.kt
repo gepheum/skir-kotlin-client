@@ -85,15 +85,20 @@ object Serializers {
 
     /**
      * Creates a serializer for nullable values of type [T]?.
+     * In Java, prefer using [javaOptional] instead of this method.
      *
      * @param other The serializer for the non-nullable type
      */
     @JvmStatic
+    @JvmName("kotlinOptional")
     fun <T : Any> optional(other: build.skir.Serializer<T>): build.skir.Serializer<T?> {
         return build.skir.Serializer(build.skir.OptionalSerializer(other.impl))
     }
 
-    /** Creates a serializer for `java.util.Optional<T>`. */
+    /**
+     * Creates a serializer for `java.util.Optional<T>`.
+     * In Kotlin, prefer using [optional] instead of this method.
+     */
     @JvmStatic
     fun <T : Any> javaOptional(other: build.skir.Serializer<T>): build.skir.Serializer<java.util.Optional<T>> {
         return build.skir.Serializer(build.skir.JavaOptionalSerializer(other.impl))
