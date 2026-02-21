@@ -216,7 +216,7 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
             requestBody: String,
             requestMeta: RequestMeta,
         ): RawResponse {
-            if (requestBody.isEmpty() || requestBody == "list") {
+            if (requestBody == "list") {
                 val methodsData =
                     JsonArray(
                         methodImpls.values.map { methodImpl ->
@@ -233,7 +233,7 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
                 val jsonCode =
                     formatReadableJson(json)
                 return RawResponse.okJson(jsonCode)
-            } else if (requestBody == "studio") {
+            } else if (requestBody.isEmpty() || requestBody == "studio") {
                 return RawResponse.okHtml(getStudioHtml(options.studioAppJsUrl))
             }
 
