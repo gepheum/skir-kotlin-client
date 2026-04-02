@@ -11,7 +11,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-/** Sends RPCs to a skir service. */
+/** Sends RPCs to a SkirRPC service. */
 class ServiceClient
     @JvmOverloads
     constructor(

@@ -3,7 +3,7 @@ package build.skir.service
 import build.skir.Serializer
 
 /**
- * Identifies one method in a Skir service, both on the server side and the client side.
+ * Identifies one method in a SkirRPC service, both on the server side and the client side.
  *
  * @param Request The type of the request parameter
  * @param Response The type of the response returned by this method
