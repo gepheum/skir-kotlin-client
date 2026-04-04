@@ -79,7 +79,6 @@ class EnumSerializer<Enum : Any> private constructor(
         doc: String,
         wrap: (T) -> Instance,
         getValue: (Instance) -> T,
-        defaultValue: (() -> T)? = null,
     ) {
         checkNotFinalized()
         @Suppress("UNCHECKED_CAST")
@@ -95,7 +94,6 @@ class EnumSerializer<Enum : Any> private constructor(
                     Enum,
                 ) -> T,
                 getKindOrdinal,
-                defaultValue,
             ),
         )
     }
@@ -239,7 +237,6 @@ class EnumSerializer<Enum : Any> private constructor(
         val wrapFn: (T) -> Enum,
         val getValue: (Enum) -> T,
         val getKindOrdinal: (Enum) -> Int,
-        val defaultValue: (() -> T)?,
     ) : Variant<Enum>(), EnumWrapperVariant.Reflective<Enum, T> {
         override fun toJson(
             input: Enum,
@@ -315,11 +312,8 @@ class EnumSerializer<Enum : Any> private constructor(
             }
 
             internal fun <Enum : Any, T> wrapDefault(variant: WrapperVariant<Enum, T>): Enum {
-                val defaultValue = variant.defaultValue
-                if (defaultValue != null) {
-                    return variant.wrap(defaultValue())
-                }
-                throw IllegalArgumentException("${variant.number} refers to a wrapper variant")
+                val value = variant.valueSerializer.fromJson(JsonPrimitive(0))
+                return variant.wrap(value)
             }
         }
     }

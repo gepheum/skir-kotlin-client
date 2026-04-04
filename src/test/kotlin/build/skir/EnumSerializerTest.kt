@@ -644,7 +644,6 @@ class EnumSerializerTest {
                 doc = "",
                 wrap = { MalformedTestEnum.WrapperWithDefault(it) },
                 getValue = { (it as MalformedTestEnum.WrapperWithDefault).value },
-                defaultValue = { 42 },
             )
             // Wrapper without default value
             addWrapperVariant(
@@ -784,23 +783,7 @@ class EnumSerializerTest {
         val result = malformedTestSerializer.fromJson(malformedJson, keepUnrecognizedValues = false)
 
         assertThat(result).isInstanceOf(MalformedTestEnum.WrapperWithDefault::class.java)
-        assertThat((result as MalformedTestEnum.WrapperWithDefault).value).isEqualTo(42) // default value
-    }
-
-    @Test
-    fun `test wrapper variant encoded as constant - JSON - without default value`() {
-        // Wrapper variant #4 (no default) encoded as constant
-        // Should throw IllegalArgumentException
-        val malformedJson = JsonPrimitive(4)
-
-        var exceptionThrown = false
-        try {
-            malformedTestSerializer.fromJson(malformedJson, keepUnrecognizedValues = false)
-        } catch (e: IllegalArgumentException) {
-            exceptionThrown = true
-            assertThat(e.message).contains("refers to a wrapper variant")
-        }
-        assertThat(exceptionThrown).isTrue()
+        assertThat((result as MalformedTestEnum.WrapperWithDefault).value).isEqualTo(0) // default value
     }
 
     @Test
@@ -810,7 +793,7 @@ class EnumSerializerTest {
         val result = malformedTestSerializer.fromJson(malformedJson, keepUnrecognizedValues = false)
 
         assertThat(result).isInstanceOf(MalformedTestEnum.WrapperWithDefault::class.java)
-        assertThat((result as MalformedTestEnum.WrapperWithDefault).value).isEqualTo(42)
+        assertThat((result as MalformedTestEnum.WrapperWithDefault).value).isEqualTo(0)
     }
 
     @Test
@@ -829,31 +812,7 @@ class EnumSerializerTest {
 
         val result = serializer.fromBytes(malformedBytes, UnrecognizedValuesPolicy.DROP)
         assertThat(result).isInstanceOf(MalformedTestEnum.WrapperWithDefault::class.java)
-        assertThat((result as MalformedTestEnum.WrapperWithDefault).value).isEqualTo(42)
-    }
-
-    @Test
-    fun `test wrapper variant encoded as constant - binary - without default value`() {
-        // Wrapper field #4 (no default) encoded as constant
-        val serializer = Serializer(malformedTestSerializer)
-        // "skir" header, field number only
-        val malformedBytes =
-            byteArrayOf(
-                115,
-                107,
-                105,
-                114,
-                4,
-            )
-
-        var exceptionThrown = false
-        try {
-            serializer.fromBytes(malformedBytes, UnrecognizedValuesPolicy.DROP)
-        } catch (e: IllegalArgumentException) {
-            exceptionThrown = true
-            assertThat(e.message).contains("refers to a wrapper variant")
-        }
-        assertThat(exceptionThrown).isTrue()
+        assertThat((result as MalformedTestEnum.WrapperWithDefault).value).isEqualTo(0)
     }
 
     @Test
@@ -881,8 +840,7 @@ class EnumSerializerTest {
         // Create a constant with unrecognized wrapper-style binary data and verify it's preserved
         // The data represents field #1 encoded as wrapper (wire byte 251 + value)
         val serializer = Serializer(malformedTestSerializer)
-        // Field #1 as wrapper with value 42
-        val wrapperStyleBytes = ByteString.of(251.toByte(), 42)
+        val wrapperStyleBytes = ByteString.of(251.toByte(), 0)
         val originalUnrecognized = UnrecognizedVariant<MalformedTestEnum>(wrapperStyleBytes)
         val constantWithData = MalformedTestEnum.ConstantWithUnrecognized(originalUnrecognized)
 
