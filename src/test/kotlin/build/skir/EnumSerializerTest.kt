@@ -569,7 +569,7 @@ class EnumSerializerTest {
     }
 
     // =========================================================================
-    // Tests for constant variant encoded as wrapper variant (malformed data)
+    // Tests for constant variant encoded as wrapper variant (schema migration)
     // =========================================================================
 
     sealed class MalformedTestEnum {
@@ -579,9 +579,8 @@ class EnumSerializerTest {
             override val kindOrdinal = 0
         }
 
-        // Constant variant that can accept unrecognized wrapper-style data
-        data class ConstantWithUnrecognized(val unrecognized: UnrecognizedVariant<MalformedTestEnum>?) :
-            MalformedTestEnum() {
+        // Constant variant
+        object ConstantOne : MalformedTestEnum() {
             override val kindOrdinal = 1
         }
 
@@ -602,7 +601,6 @@ class EnumSerializerTest {
 
         companion object {
             val UNKNOWN = Unknown(null)
-            val CONSTANT_WITH_UNRECOGNIZED = ConstantWithUnrecognized(null)
         }
     }
 
@@ -616,18 +614,13 @@ class EnumSerializerTest {
             { unrecognized -> MalformedTestEnum.Unknown(unrecognized) },
             { enum -> (enum as? MalformedTestEnum.Unknown)?.unrecognized },
         ).apply {
-            // Constant that can wrap unrecognized data
-            // Constant that can wrap unrecognized data
             addConstantVariant(
                 number = 1,
-                name = "constantWithUnrecognized",
+                name = "constantOne",
                 kindOrdinal = 1,
                 doc = "",
-                instance = MalformedTestEnum.CONSTANT_WITH_UNRECOGNIZED,
-                wrapUnrecognized = { MalformedTestEnum.ConstantWithUnrecognized(it) },
-                getUnrecognized = { (it as? MalformedTestEnum.ConstantWithUnrecognized)?.unrecognized },
+                instance = MalformedTestEnum.ConstantOne,
             )
-            // Normal constant (no unrecognized support)
             addConstantVariant(
                 number = 2,
                 name = "normalConstant",
@@ -635,7 +628,6 @@ class EnumSerializerTest {
                 doc = "",
                 instance = MalformedTestEnum.NormalConstant,
             )
-            // Wrapper with default value
             addWrapperVariant(
                 number = 3,
                 name = "wrapperWithDefault",
@@ -645,7 +637,6 @@ class EnumSerializerTest {
                 wrap = { MalformedTestEnum.WrapperWithDefault(it) },
                 getValue = { (it as MalformedTestEnum.WrapperWithDefault).value },
             )
-            // Wrapper without default value
             addWrapperVariant(
                 number = 4,
                 name = "wrapperNoDefault",
@@ -659,116 +650,28 @@ class EnumSerializerTest {
         }
 
     @Test
-    fun `test constant variant encoded as wrapper - JSON - with keepUnrecognizedValues and wrapUnrecognized`() {
-        // Constant variant #1 encoded as wrapper (array format)
-        // Since wrapUnrecognized is provided and keepUnrecognizedValues=true, should wrap the unrecognized data
+    fun `test constant variant encoded as wrapper - JSON - returns constant and drops payload`() {
+        // When a variant that was once a wrapper is now a constant, the payload is dropped
         val malformedJson = JsonArray(listOf(JsonPrimitive(1), JsonPrimitive("unexpected_value")))
-        val result = malformedTestSerializer.fromJson(malformedJson, keepUnrecognizedValues = true)
+        val resultKeep = malformedTestSerializer.fromJson(malformedJson, keepUnrecognizedValues = true)
+        val resultDrop = malformedTestSerializer.fromJson(malformedJson, keepUnrecognizedValues = false)
 
-        assertThat(result).isInstanceOf(MalformedTestEnum.ConstantWithUnrecognized::class.java)
-        val unrecognized = (result as MalformedTestEnum.ConstantWithUnrecognized).unrecognized
-        assertThat(unrecognized).isNotNull()
-        assertThat(unrecognized?.jsonElement).isEqualTo(malformedJson)
+        assertThat(resultKeep).isEqualTo(MalformedTestEnum.ConstantOne)
+        assertThat(resultDrop).isEqualTo(MalformedTestEnum.ConstantOne)
     }
 
     @Test
-    fun `test constant variant encoded as wrapper - JSON - without keepUnrecognizedValues`() {
-        // Constant variant #1 encoded as wrapper, but keepUnrecognizedValues=false
-        // Should return the constant instance gracefully
-        val malformedJson = JsonArray(listOf(JsonPrimitive(1), JsonPrimitive("unexpected_value")))
-        val result = malformedTestSerializer.fromJson(malformedJson, keepUnrecognizedValues = false)
-
-        assertThat(result).isEqualTo(MalformedTestEnum.CONSTANT_WITH_UNRECOGNIZED)
-    }
-
-    @Test
-    fun `test constant variant encoded as wrapper - JSON - without wrapUnrecognized support`() {
-        // Constant variant #2 (no wrapUnrecognized) encoded as wrapper
-        // Should throw IllegalArgumentException
-        val malformedJson = JsonArray(listOf(JsonPrimitive(2), JsonPrimitive("unexpected")))
-
-        var exceptionThrown = false
-        try {
-            malformedTestSerializer.fromJson(malformedJson, keepUnrecognizedValues = true)
-        } catch (e: IllegalArgumentException) {
-            exceptionThrown = true
-            assertThat(e.message).contains("refers to a constant variant")
-        }
-        assertThat(exceptionThrown).isTrue()
-    }
-
-    @Test
-    fun `test constant variant encoded as wrapper - binary - with keepUnrecognizedValues and wrapUnrecognized`() {
+    fun `test constant variant encoded as wrapper - binary - returns constant and drops payload`() {
         // Binary format: field #1 encoded as wrapper variant (wire type 251 for field number 1)
+        // "skir" header bytes: 115, 107, 105, 114; wire type for wrapper field #1: 251; value: 100
         val serializer = Serializer(malformedTestSerializer)
+        val malformedBytes = byteArrayOf(115, 107, 105, 114, 251.toByte(), 100)
 
-        // Create a buffer with wrapper-style encoding for field #1
-        // Wire byte 251 (250 + 1) indicates wrapper variant with field number 1
-        // Followed by int32 value (e.g., 100)
-        // "skir" header bytes: 115, 107, 105, 114
-        // wire type for wrapper field #1: 251
-        // int32 value: 100
-        val malformedBytes =
-            byteArrayOf(
-                115,
-                107,
-                105,
-                114,
-                251.toByte(),
-                100,
-            )
+        val resultKeep = serializer.fromBytes(malformedBytes, UnrecognizedValuesPolicy.KEEP)
+        val resultDrop = serializer.fromBytes(malformedBytes, UnrecognizedValuesPolicy.DROP)
 
-        val result = serializer.fromBytes(malformedBytes, UnrecognizedValuesPolicy.KEEP)
-        assertThat(result).isInstanceOf(MalformedTestEnum.ConstantWithUnrecognized::class.java)
-        val unrecognized = (result as MalformedTestEnum.ConstantWithUnrecognized).unrecognized
-        assertThat(unrecognized).isNotNull()
-        // Should preserve the original bytes (wire byte + value)
-        assertThat(unrecognized?.bytes).isEqualTo(ByteString.of(251.toByte(), 100))
-    }
-
-    @Test
-    fun `test constant variant encoded as wrapper - binary - without keepUnrecognizedValues`() {
-        // Same malformed binary data, but without keeping unrecognized values
-        val serializer = Serializer(malformedTestSerializer)
-        // "skir" header bytes, wrapper field #1 wire type, value
-        val malformedBytes =
-            byteArrayOf(
-                115,
-                107,
-                105,
-                114,
-                251.toByte(),
-                100,
-            )
-
-        val result = serializer.fromBytes(malformedBytes, UnrecognizedValuesPolicy.DROP)
-        // Should gracefully return the constant instance
-        assertThat(result).isEqualTo(MalformedTestEnum.CONSTANT_WITH_UNRECOGNIZED)
-    }
-
-    @Test
-    fun `test constant variant encoded as wrapper - binary - without wrapUnrecognized support`() {
-        // Field #2 (no wrapUnrecognized) encoded as wrapper
-        val serializer = Serializer(malformedTestSerializer)
-        // "skir" header, wrapper field #2 (250 + 2), some value
-        val malformedBytes =
-            byteArrayOf(
-                115,
-                107,
-                105,
-                114,
-                252.toByte(),
-                50,
-            )
-
-        var exceptionThrown = false
-        try {
-            serializer.fromBytes(malformedBytes, UnrecognizedValuesPolicy.KEEP)
-        } catch (e: IllegalArgumentException) {
-            exceptionThrown = true
-            assertThat(e.message).contains("refers to a constant variant")
-        }
-        assertThat(exceptionThrown).isTrue()
+        assertThat(resultKeep).isEqualTo(MalformedTestEnum.ConstantOne)
+        assertThat(resultDrop).isEqualTo(MalformedTestEnum.ConstantOne)
     }
 
     // =========================================================================
@@ -813,44 +716,5 @@ class EnumSerializerTest {
         val result = serializer.fromBytes(malformedBytes, UnrecognizedValuesPolicy.DROP)
         assertThat(result).isInstanceOf(MalformedTestEnum.WrapperWithDefault::class.java)
         assertThat((result as MalformedTestEnum.WrapperWithDefault).value).isEqualTo(0)
-    }
-
-    @Test
-    fun `test roundtrip of constant with unrecognized data preserved`() {
-        // Create a constant with unrecognized wrapper-style data, serialize it, and verify it's preserved
-        // The unrecognized data represents field #1 encoded as a wrapper (which is malformed)
-        val wrapperStyleJson = JsonArray(listOf(JsonPrimitive(1), JsonPrimitive("unexpected_data")))
-        val originalUnrecognized = UnrecognizedVariant<MalformedTestEnum>(wrapperStyleJson)
-        val constantWithData = MalformedTestEnum.ConstantWithUnrecognized(originalUnrecognized)
-
-        // Serialize to JSON (dense format)
-        val json = malformedTestSerializer.toJson(constantWithData, readableFlavor = false)
-        // Should preserve the unrecognized JSON element
-        assertThat(json).isEqualTo(wrapperStyleJson)
-
-        // Deserialize back
-        val restored = malformedTestSerializer.fromJson(json, keepUnrecognizedValues = true)
-        assertThat(restored).isInstanceOf(MalformedTestEnum.ConstantWithUnrecognized::class.java)
-        val restoredUnrecognized = (restored as MalformedTestEnum.ConstantWithUnrecognized).unrecognized
-        assertThat(restoredUnrecognized?.jsonElement).isEqualTo(wrapperStyleJson)
-    }
-
-    @Test
-    fun `test roundtrip of constant with unrecognized data preserved - binary`() {
-        // Create a constant with unrecognized wrapper-style binary data and verify it's preserved
-        // The data represents field #1 encoded as wrapper (wire byte 251 + value)
-        val serializer = Serializer(malformedTestSerializer)
-        val wrapperStyleBytes = ByteString.of(251.toByte(), 0)
-        val originalUnrecognized = UnrecognizedVariant<MalformedTestEnum>(wrapperStyleBytes)
-        val constantWithData = MalformedTestEnum.ConstantWithUnrecognized(originalUnrecognized)
-
-        // Serialize to binary
-        val bytes = serializer.toBytes(constantWithData)
-
-        // Deserialize back
-        val restored = serializer.fromBytes(bytes.toByteArray(), UnrecognizedValuesPolicy.KEEP)
-        assertThat(restored).isInstanceOf(MalformedTestEnum.ConstantWithUnrecognized::class.java)
-        val restoredUnrecognized = (restored as MalformedTestEnum.ConstantWithUnrecognized).unrecognized
-        assertThat(restoredUnrecognized?.bytes).isEqualTo(wrapperStyleBytes)
     }
 }

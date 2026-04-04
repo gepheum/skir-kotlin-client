@@ -54,8 +54,6 @@ class EnumSerializer<Enum : Any> private constructor(
         kindOrdinal: Int,
         doc: String,
         instance: Enum,
-        wrapUnrecognized: ((UnrecognizedVariant<Enum>) -> Enum)? = null,
-        getUnrecognized: (Enum) -> UnrecognizedVariant<Enum>? = { null },
     ) {
         checkNotFinalized()
         addVariantImpl(
@@ -65,8 +63,6 @@ class EnumSerializer<Enum : Any> private constructor(
                 kindOrdinal,
                 doc,
                 instance,
-                getUnrecognized = getUnrecognized,
-                wrapUnrecognized = wrapUnrecognized,
             ),
         )
     }
@@ -187,8 +183,6 @@ class EnumSerializer<Enum : Any> private constructor(
         override val kindOrdinal: Int,
         override val doc: String,
         override val constant: Enum,
-        private val getUnrecognized: (Enum) -> UnrecognizedVariant<Enum>?,
-        val wrapUnrecognized: ((UnrecognizedVariant<Enum>) -> Enum)?,
     ) : Variant<Enum>(), EnumConstantVariant.Reflective<Enum> {
         override fun toJson(
             input: Enum,
@@ -197,12 +191,7 @@ class EnumSerializer<Enum : Any> private constructor(
             return if (readableFlavor) {
                 JsonPrimitive(name)
             } else {
-                val unrecognized = getUnrecognized(input)?.jsonElement
-                if (unrecognized != null) {
-                    unrecognized
-                } else {
-                    JsonPrimitive(number)
-                }
+                JsonPrimitive(number)
             }
         }
 
@@ -210,12 +199,7 @@ class EnumSerializer<Enum : Any> private constructor(
             input: Enum,
             buffer: Buffer,
         ) {
-            val unrecognized = getUnrecognized(input)?.bytes
-            if (unrecognized != null) {
-                buffer.write(unrecognized)
-            } else {
-                encodeInt32(number, buffer)
-            }
+            encodeInt32(number, buffer)
         }
 
         override fun appendString(
@@ -399,18 +383,7 @@ class EnumSerializer<Enum : Any> private constructor(
                     is UnknownVariant<Enum> -> throw IllegalArgumentException(
                         "$number refers to a constant variant",
                     )
-                    is ConstantVariant<Enum> -> {
-                        if (!keepUnrecognizedValues) {
-                            variant.constant
-                        } else {
-                            val wrapUnrecognized = variant.wrapUnrecognized
-                            if (wrapUnrecognized != null && number != null) {
-                                wrapUnrecognized(UnrecognizedVariant(json))
-                            } else {
-                                throw IllegalArgumentException("$number refers to a constant variant")
-                            }
-                        }
-                    }
+                    is ConstantVariant<Enum> -> variant.constant
                     is RemovedNumber<Enum> -> unknown.constant
                     is WrapperVariant<Enum, *> -> {
                         val second = json[1]
@@ -480,21 +453,8 @@ class EnumSerializer<Enum : Any> private constructor(
                     "$number refers to a constant variant",
                 )
                 is ConstantVariant<Enum> -> {
-                    if (!keepUnrecognizedValues) {
-                        decodeUnused(buffer)
-                        variant.constant
-                    } else {
-                        val wrapUnrecognized = variant.wrapUnrecognized
-                        if (wrapUnrecognized != null) {
-                            wrapUnrecognized(
-                                UnrecognizedVariant(
-                                    readUnrecognizedWrapperBytes(number, wire, buffer),
-                                ),
-                            )
-                        } else {
-                            throw IllegalArgumentException("$number refers to a constant variant")
-                        }
-                    }
+                    decodeUnused(buffer)
+                    variant.constant
                 }
                 is WrapperVariant<Enum, *> ->
                     WrapperVariant.wrapDecoded(
