@@ -717,4 +717,62 @@ class EnumSerializerTest {
         assertThat(result).isInstanceOf(MalformedTestEnum.WrapperWithDefault::class.java)
         assertThat((result as MalformedTestEnum.WrapperWithDefault).value).isEqualTo(0)
     }
+
+    // ─── Enum name case-compatibility tests ────────────────────────────────────
+
+    @Test
+    fun `serializing lowercase-named constant produces lowercase readable JSON`() {
+        // The colorEnumSerializer registers constants as "red", "green", "blue".
+        // Readable JSON should use those lowercase names.
+        val json = colorEnumSerializer.toJson(Color.RED, readableFlavor = true)
+        assertThat((json as JsonPrimitive).content).isEqualTo("red")
+    }
+
+    @Test
+    fun `parsing UPPER_CASE constant name from readable JSON succeeds`() {
+        // Simulate JSON produced by an old serializer that used UPPER_CASE names.
+        val result = colorEnumSerializer.fromJson(JsonPrimitive("RED"), keepUnrecognizedValues = false)
+        assertThat(result).isEqualTo(Color.RED)
+    }
+
+    @Test
+    fun `parsing lower_case constant name from readable JSON succeeds`() {
+        val result = colorEnumSerializer.fromJson(JsonPrimitive("green"), keepUnrecognizedValues = false)
+        assertThat(result).isEqualTo(Color.GREEN)
+    }
+
+    @Test
+    fun `parsing UPPER_CASE constant name yields same result as lower_case name`() {
+        val fromUpper = colorEnumSerializer.fromJson(JsonPrimitive("BLUE"), keepUnrecognizedValues = false)
+        val fromLower = colorEnumSerializer.fromJson(JsonPrimitive("blue"), keepUnrecognizedValues = false)
+        assertThat(fromUpper).isEqualTo(fromLower)
+        assertThat(fromUpper).isEqualTo(Color.BLUE)
+    }
+
+    @Test
+    fun `parsing UPPER_CASE wrapper kind from readable JSON succeeds`() {
+        // The statusEnumSerializer registers "pending" (lowercase). Simulate an
+        // old-style {"kind":"PENDING","value":"foo"} object from a legacy serializer.
+        val upperKindJson =
+            JsonObject(
+                mapOf("kind" to JsonPrimitive("PENDING"), "value" to JsonPrimitive("waiting")),
+            )
+        val lowerKindJson =
+            JsonObject(
+                mapOf("kind" to JsonPrimitive("pending"), "value" to JsonPrimitive("waiting")),
+            )
+        val fromUpper = statusEnumSerializer.fromJson(upperKindJson, keepUnrecognizedValues = false)
+        val fromLower = statusEnumSerializer.fromJson(lowerKindJson, keepUnrecognizedValues = false)
+        assertThat(fromUpper).isInstanceOf(Status.PendingOption::class.java)
+        assertThat(fromLower).isInstanceOf(Status.PendingOption::class.java)
+        assertThat((fromUpper as Status.PendingOption).reason).isEqualTo("waiting")
+        assertThat((fromLower as Status.PendingOption).reason).isEqualTo("waiting")
+    }
+
+    @Test
+    fun `serializing lower_case wrapper variant produces lower_case kind in readable JSON`() {
+        val pending = Status.PendingOption("approved")
+        val json = statusEnumSerializer.toJson(pending, readableFlavor = true) as JsonObject
+        assertThat((json["kind"] as JsonPrimitive).content).isEqualTo("pending")
+    }
 }

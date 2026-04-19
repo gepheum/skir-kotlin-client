@@ -310,6 +310,21 @@ class EnumSerializer<Enum : Any> private constructor(
         mutableVariants.add(variant.asDescriptorVariant())
         numberToVariant[variant.number] = variant
         nameToVariant[variant.name] = variant
+        // Register case aliases so that both UPPER_CASE and lower_case names are
+        // accepted when parsing readable JSON, regardless of which casing the
+        // code generator used when constructing the serializer.
+        run {
+            val nameUpper = variant.name.uppercase()
+            if (nameUpper != variant.name) {
+                nameToVariant[nameUpper] = variant
+            }
+        }
+        run {
+            val nameLower = variant.name.lowercase()
+            if (nameLower != variant.name) {
+                nameToVariant[nameLower] = variant
+            }
+        }
         kindOrdinalToVariant[variant.kindOrdinal] = variant
     }
 
