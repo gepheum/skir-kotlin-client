@@ -748,4 +748,12 @@ class EnumSerializerTest {
         assertThat(fromUpper).isEqualTo(fromLower)
         assertThat(fromUpper).isEqualTo(Color.BLUE)
     }
+
+    @Test
+    fun `parsing UNKNOWN and unknown yield the same unknown variant`() {
+        val fromUpper = colorEnumSerializer.fromJson(JsonPrimitive("UNKNOWN"), keepUnrecognizedValues = false)
+        val fromLower = colorEnumSerializer.fromJson(JsonPrimitive("unknown"), keepUnrecognizedValues = false)
+        assertThat(fromUpper).isEqualTo(fromLower)
+        assertThat(fromLower).isEqualTo(Color.UNKNOWN)
+    }
 }

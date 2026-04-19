@@ -310,9 +310,9 @@ class EnumSerializer<Enum : Any> private constructor(
         mutableVariants.add(variant.asDescriptorVariant())
         numberToVariant[variant.number] = variant
         nameToVariant[variant.name] = variant
-        // Register case aliases for constant variants so that both UPPER_CASE
-        // and lower_case names are accepted when parsing readable JSON.
-        if (variant is ConstantVariant) {
+        // Register case aliases for constants and UNKNOWN so that both
+        // UPPER_CASE and lower_case names are accepted when parsing readable JSON.
+        if (variant is ConstantVariant || variant is UnknownVariant) {
             run {
                 val nameUpper = variant.name.uppercase()
                 if (nameUpper != variant.name) {
