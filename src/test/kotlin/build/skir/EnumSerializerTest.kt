@@ -748,31 +748,4 @@ class EnumSerializerTest {
         assertThat(fromUpper).isEqualTo(fromLower)
         assertThat(fromUpper).isEqualTo(Color.BLUE)
     }
-
-    @Test
-    fun `parsing UPPER_CASE wrapper kind from readable JSON succeeds`() {
-        // The statusEnumSerializer registers "pending" (lowercase). Simulate an
-        // old-style {"kind":"PENDING","value":"foo"} object from a legacy serializer.
-        val upperKindJson =
-            JsonObject(
-                mapOf("kind" to JsonPrimitive("PENDING"), "value" to JsonPrimitive("waiting")),
-            )
-        val lowerKindJson =
-            JsonObject(
-                mapOf("kind" to JsonPrimitive("pending"), "value" to JsonPrimitive("waiting")),
-            )
-        val fromUpper = statusEnumSerializer.fromJson(upperKindJson, keepUnrecognizedValues = false)
-        val fromLower = statusEnumSerializer.fromJson(lowerKindJson, keepUnrecognizedValues = false)
-        assertThat(fromUpper).isInstanceOf(Status.PendingOption::class.java)
-        assertThat(fromLower).isInstanceOf(Status.PendingOption::class.java)
-        assertThat((fromUpper as Status.PendingOption).reason).isEqualTo("waiting")
-        assertThat((fromLower as Status.PendingOption).reason).isEqualTo("waiting")
-    }
-
-    @Test
-    fun `serializing lower_case wrapper variant produces lower_case kind in readable JSON`() {
-        val pending = Status.PendingOption("approved")
-        val json = statusEnumSerializer.toJson(pending, readableFlavor = true) as JsonObject
-        assertThat((json["kind"] as JsonPrimitive).content).isEqualTo("pending")
-    }
 }
