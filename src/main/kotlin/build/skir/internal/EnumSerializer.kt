@@ -140,7 +140,7 @@ class EnumSerializer<Enum : Any> private constructor(
     ) : Variant<Enum>(), EnumConstantVariant.Reflective<Enum> {
         override val kindOrdinal = 0
         override val number get() = 0
-        override val name get() = "UNKNOWN"
+        override val name get() = "unknown"
         override val doc get() = ""
 
         override fun toJson(
