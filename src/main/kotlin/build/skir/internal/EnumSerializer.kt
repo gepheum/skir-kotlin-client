@@ -148,7 +148,7 @@ class EnumSerializer<Enum : Any> private constructor(
             readableFlavor: Boolean,
         ): JsonElement {
             return if (readableFlavor) {
-                JsonPrimitive("UNKNOWN")
+                JsonPrimitive("unknown")
             } else {
                 val unrecognized = getUnrecognized(input)?.jsonElement
                 unrecognized ?: JsonPrimitive(0)
