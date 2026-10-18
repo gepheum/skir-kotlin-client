@@ -61,6 +61,60 @@ class ServiceTest {
     private val defaultMeta = Meta("Alice")
 
     @Test
+    fun `max depth limits both request formats and accounts for the envelope`() =
+        runBlocking {
+            val serializer = Serializers.list(Serializers.list(Serializers.int32))
+            val method = Method("nested", 4, serializer, serializer, "")
+            for (maxNestingDepth in listOf(-1, 0, 1, 2, Int.MAX_VALUE)) {
+                var calls = 0
+                val limitedService =
+                    Service.Builder<Meta>()
+                        .setMaxNestingDepth(maxNestingDepth)
+                        .addMethod(method) { req, _ ->
+                            calls++
+                            req
+                        }
+                        .build()
+                for (body in listOf("{\"method\":\"nested\",\"request\":[[42]]}", "nested::dense:[[42]]")) {
+                    val response = limitedService.handleRequest(body, defaultMeta)
+                    assertThat(response.statusCode).isEqualTo(if (maxNestingDepth == 1) 400 else 200)
+                    if (maxNestingDepth != 1) {
+                        assertThat(serializer.fromJsonCode(response.data)).isEqualTo(listOf(listOf(42)))
+                    }
+                }
+                assertThat(calls).isEqualTo(if (maxNestingDepth == 1) 0 else 2)
+            }
+        }
+
+    @Test
+    fun `max depth checks the entire JSON envelope before decoding the request`() =
+        runBlocking {
+            var calls = 0
+            val limitedService =
+                Service.Builder<Meta>()
+                    .setMaxNestingDepth(1)
+                    .addMethod(echoMethod) { req, _ ->
+                        calls++
+                        req
+                    }
+                    .build()
+            val accepted =
+                limitedService.handleRequest(
+                    "{\"method\":\"echo\",\"request\":\"hello\",\"extra\":[0]}",
+                    defaultMeta,
+                )
+            assertThat(accepted.statusCode).isEqualTo(200)
+            val rejected =
+                limitedService.handleRequest(
+                    "{\"method\":\"echo\",\"request\":\"hello\",\"extra\":[[0]]}",
+                    defaultMeta,
+                )
+            assertThat(rejected.statusCode).isEqualTo(400)
+            assertThat(rejected.data).contains("maximum nesting depth 1 reached")
+            assertThat(calls).isEqualTo(1)
+        }
+
+    @Test
     fun `test handleRequest - list methods`() =
         runBlocking {
             val response = service.handleRequest("list", defaultMeta)

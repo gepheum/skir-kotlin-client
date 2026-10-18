@@ -1,6 +1,7 @@
 package build.skir
 
 import build.skir.internal.SerializerImpl
+import build.skir.internal.expectDepthWithinLimit
 import build.skir.internal.formatDenseJson
 import build.skir.internal.formatReadableJson
 import build.skir.reflection.TypeDescriptor
@@ -125,27 +126,22 @@ class Serializer<T> internal constructor(
     /**
      * Deserializes an object from its JSON representation.
      * Works with both dense and readable JSON flavors.
-     * Unrecognized fields are dropped.
      *
      * @param jsonCode The stringified JSON to deserialize
+     * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants;
+     *     defaults to [UnrecognizedValuesPolicy.DROP]
+     * @param maxNestingDepth Maximum container nesting depth; negative values disable the check (default)
      * @return The deserialized object
      */
-    fun fromJsonCode(jsonCode: String): T {
-        return fromJsonCode(jsonCode, UnrecognizedValuesPolicy.DROP)
-    }
-
-    /**
-     * Deserializes an object from its JSON representation.
-     * Works with both dense and readable JSON flavors.
-     *
-     * @param jsonCode The stringified JSON to deserialize
-     * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants
-     * @return The deserialized object
-     */
+    @JvmOverloads
     fun fromJsonCode(
         jsonCode: String,
-        unrecognizedValues: UnrecognizedValuesPolicy,
+        unrecognizedValues: UnrecognizedValuesPolicy = UnrecognizedValuesPolicy.DROP,
+        maxNestingDepth: Int = -1,
     ): T {
+        if (maxNestingDepth >= 0) {
+            expectDepthWithinLimit(jsonCode, maxNestingDepth)
+        }
         val keepUnrecognizedValues = unrecognizedValues == UnrecognizedValuesPolicy.KEEP
         val jsonElement = Json.Default.decodeFromString(JsonElement.serializer(), jsonCode)
         return this.impl.fromJson(jsonElement, keepUnrecognizedValues = keepUnrecognizedValues)
@@ -154,26 +150,16 @@ class Serializer<T> internal constructor(
     /**
      * Deserializes an object from its JSON representation.
      * Works with both dense and readable JSON flavors.
-     * Unrecognized fields are dropped.
      *
      * @param json The JSON element to deserialize
+     * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants;
+     *     defaults to [UnrecognizedValuesPolicy.DROP]
      * @return The deserialized object
      */
-    fun fromJson(json: JsonElement): T {
-        return fromJson(json, UnrecognizedValuesPolicy.DROP)
-    }
-
-    /**
-     * Deserializes an object from its JSON representation.
-     * Works with both dense and readable JSON flavors.
-     *
-     * @param json The JSON element to deserialize
-     * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants
-     * @return The deserialized object
-     */
+    @JvmOverloads
     fun fromJson(
         json: JsonElement,
-        unrecognizedValues: UnrecognizedValuesPolicy,
+        unrecognizedValues: UnrecognizedValuesPolicy = UnrecognizedValuesPolicy.DROP,
     ): T {
         val keepUnrecognizedValues = unrecognizedValues == UnrecognizedValuesPolicy.KEEP
         return this.impl.fromJson(json, keepUnrecognizedValues = keepUnrecognizedValues)
@@ -194,64 +180,54 @@ class Serializer<T> internal constructor(
 
     /**
      * Deserializes an object from its binary or UTF-8 JSON representation.
-     * Unrecognized fields are dropped.
      *
      * @param bytes The byte array containing the serialized data
+     * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants;
+     *     defaults to [UnrecognizedValuesPolicy.DROP]
+     * @param maxNestingDepth Maximum nesting depth; negative values disable the check (default)
      * @return The deserialized object
      */
-    fun fromBytes(bytes: ByteArray): T {
-        return fromBytes(bytes, UnrecognizedValuesPolicy.DROP)
-    }
-
-    /**
-     * Deserializes an object from its binary or UTF-8 JSON representation.
-     *
-     * @param bytes The byte array containing the serialized data
-     * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants
-     * @return The deserialized object
-     */
+    @JvmOverloads
     fun fromBytes(
         bytes: ByteArray,
-        unrecognizedValues: UnrecognizedValuesPolicy,
+        unrecognizedValues: UnrecognizedValuesPolicy = UnrecognizedValuesPolicy.DROP,
+        maxNestingDepth: Int = -1,
     ): T {
         val buffer = Buffer()
         buffer.write(bytes)
-        return this.fromBytes(buffer, unrecognizedValues)
-    }
-
-    /**
-     * Deserializes an object from its binary or UTF-8 JSON representation.
-     * Unrecognized fields are dropped.
-     *
-     * @param bytes The byte string containing the serialized data
-     * @return The deserialized object
-     */
-    fun fromBytes(bytes: ByteString): T {
-        return fromBytes(bytes, UnrecognizedValuesPolicy.DROP)
+        return this.fromBytes(buffer, unrecognizedValues, maxNestingDepth)
     }
 
     /**
      * Deserializes an object from its binary or UTF-8 JSON representation.
      *
      * @param bytes The byte string containing the serialized data
-     * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants
+     * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants;
+     *     defaults to [UnrecognizedValuesPolicy.DROP]
+     * @param maxNestingDepth Maximum nesting depth; negative values disable the check (default)
      * @return The deserialized object
      */
+    @JvmOverloads
     fun fromBytes(
         bytes: ByteString,
-        unrecognizedValues: UnrecognizedValuesPolicy,
+        unrecognizedValues: UnrecognizedValuesPolicy = UnrecognizedValuesPolicy.DROP,
+        maxNestingDepth: Int = -1,
     ): T {
         val buffer = Buffer()
         buffer.write(bytes)
-        return this.fromBytes(buffer, unrecognizedValues)
+        return this.fromBytes(buffer, unrecognizedValues, maxNestingDepth)
     }
 
     private fun fromBytes(
         buffer: Buffer,
         unrecognizedValues: UnrecognizedValuesPolicy,
+        maxNestingDepth: Int,
     ): T {
         return if (buffer.rangeEquals(0, BINARY_PREFIX)) {
             buffer.skip(4)
+            if (maxNestingDepth >= 0) {
+                expectDepthWithinLimit(buffer, maxNestingDepth)
+            }
             val keepUnrecognizedValues = unrecognizedValues == UnrecognizedValuesPolicy.KEEP
             val result = this.impl.decode(buffer, keepUnrecognizedValues = keepUnrecognizedValues)
             if (!buffer.exhausted()) {
@@ -259,7 +235,7 @@ class Serializer<T> internal constructor(
             }
             result
         } else {
-            this.fromJsonCode(buffer.readUtf8(), unrecognizedValues)
+            this.fromJsonCode(buffer.readUtf8(), unrecognizedValues, maxNestingDepth)
         }
     }
 

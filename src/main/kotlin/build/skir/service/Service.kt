@@ -3,6 +3,7 @@ package build.skir.service
 import build.skir.JsonFlavor
 import build.skir.UnrecognizedValuesPolicy
 import build.skir.internal.JsonObjectBuilder
+import build.skir.internal.expectDepthWithinLimit
 import build.skir.internal.formatReadableJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -55,6 +56,7 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
 
     private data class ServiceOptions<in RequestMeta>(
         val keepUnrecognizedValues: Boolean = false,
+        val maxNestingDepth: Int,
         val canSendUnknownErrorMessage: (MethodErrorInfo<RequestMeta, *>) -> Boolean,
         val errorLogger: (MethodErrorInfo<RequestMeta, *>) -> Unit,
         val studioAppJsUrl: String,
@@ -74,6 +76,7 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
     class Builder<RequestMeta> {
         private val methodImpls: MutableMap<Long, MethodImpl<*, *, RequestMeta>> = mutableMapOf()
         private var keepUnrecognizedValues = false
+        private var maxNestingDepth = -1
         private var canSendUnknownErrorMessage: (MethodErrorInfo<RequestMeta, *>) -> Boolean = { false }
         private var errorLogger: (MethodErrorInfo<RequestMeta, *>) -> Unit = { errorContext ->
             System.err.println("Error in method ${errorContext.method.name}: ${errorContext.error}")
@@ -110,6 +113,17 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
          */
         fun setKeepUnrecognizedValues(keepUnrecognizedValues: Boolean): Builder<RequestMeta> {
             this.keepUnrecognizedValues = keepUnrecognizedValues
+            return this
+        }
+
+        /**
+         * Limits request nesting depth.
+         * Zero and negative values disable the check (default).
+         *
+         * @return `this` builder
+         */
+        fun setMaxNestingDepth(maxNestingDepth: Int): Builder<RequestMeta> {
+            this.maxNestingDepth = maxNestingDepth
             return this
         }
 
@@ -191,6 +205,7 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
                     methodImpls.toMap(),
                     ServiceOptions(
                         keepUnrecognizedValues,
+                        maxNestingDepth,
                         canSendUnknownErrorMessage,
                         errorLogger,
                         studioAppJsUrl,
@@ -247,6 +262,21 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
             val firstChar = requestBody[0]
             if (firstChar.isWhitespace() || firstChar == '{') {
                 // A JSON object
+                if (options.maxNestingDepth > 0) {
+                    try {
+                        val envelopeMaxNestingDepth =
+                            if (options.maxNestingDepth == Int.MAX_VALUE) {
+                                Int.MAX_VALUE
+                            } else {
+                                options.maxNestingDepth + 1
+                            }
+                        expectDepthWithinLimit(requestBody, envelopeMaxNestingDepth)
+                    } catch (e: Exception) {
+                        return RawResponse.badRequest(
+                            "bad request: maximum nesting depth ${options.maxNestingDepth} reached",
+                        )
+                    }
+                }
                 val reqBodyJson: JsonObject =
                     try {
                         kotlinx.serialization.json.Json.parseToJsonElement(requestBody) as? JsonObject
@@ -367,7 +397,11 @@ class Service<in RequestMeta> private constructor(private val impl: Impl<Request
             val req: Any? =
                 try {
                     if (requestDataCode != null) {
-                        methodImpl.method.requestSerializer.fromJsonCode(requestDataCode, unrecognizedValues)
+                        methodImpl.method.requestSerializer.fromJsonCode(
+                            requestDataCode,
+                            unrecognizedValues,
+                            if (options.maxNestingDepth > 0) options.maxNestingDepth else -1,
+                        )
                     } else {
                         methodImpl.method.requestSerializer.fromJson(requestDataJson!!, unrecognizedValues)
                     }
