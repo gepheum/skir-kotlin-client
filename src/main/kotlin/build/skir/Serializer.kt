@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import okio.Buffer
 import okio.ByteString
+import okio.ByteString.Companion.encodeUtf8
 
 /** When serializing a value to JSON, you can choose one of two flavors. */
 enum class JsonFlavor {
@@ -192,7 +193,7 @@ class Serializer<T> internal constructor(
     }
 
     /**
-     * Deserializes an object from its binary representation.
+     * Deserializes an object from its binary or UTF-8 JSON representation.
      * Unrecognized fields are dropped.
      *
      * @param bytes The byte array containing the serialized data
@@ -203,7 +204,7 @@ class Serializer<T> internal constructor(
     }
 
     /**
-     * Deserializes an object from its binary representation.
+     * Deserializes an object from its binary or UTF-8 JSON representation.
      *
      * @param bytes The byte array containing the serialized data
      * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants
@@ -219,7 +220,7 @@ class Serializer<T> internal constructor(
     }
 
     /**
-     * Deserializes an object from its binary representation.
+     * Deserializes an object from its binary or UTF-8 JSON representation.
      * Unrecognized fields are dropped.
      *
      * @param bytes The byte string containing the serialized data
@@ -230,7 +231,7 @@ class Serializer<T> internal constructor(
     }
 
     /**
-     * Deserializes an object from its binary representation.
+     * Deserializes an object from its binary or UTF-8 JSON representation.
      *
      * @param bytes The byte string containing the serialized data
      * @param unrecognizedValues Whether to keep or drop unrecognized fields and variants
@@ -249,11 +250,8 @@ class Serializer<T> internal constructor(
         buffer: Buffer,
         unrecognizedValues: UnrecognizedValuesPolicy,
     ): T {
-        return if (buffer.readByte().toInt() == 's'.code &&
-            buffer.readByte().toInt() == 'k'.code &&
-            buffer.readByte().toInt() == 'i'.code &&
-            buffer.readByte().toInt() == 'r'.code
-        ) {
+        return if (buffer.rangeEquals(0, BINARY_PREFIX)) {
+            buffer.skip(4)
             val keepUnrecognizedValues = unrecognizedValues == UnrecognizedValuesPolicy.KEEP
             val result = this.impl.decode(buffer, keepUnrecognizedValues = keepUnrecognizedValues)
             if (!buffer.exhausted()) {
@@ -274,3 +272,5 @@ class Serializer<T> internal constructor(
     @get:JvmName("typeDescriptor")
     val typeDescriptor: TypeDescriptor.Reflective<T> = impl.typeDescriptor
 }
+
+private val BINARY_PREFIX = "skir".encodeUtf8()

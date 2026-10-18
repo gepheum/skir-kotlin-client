@@ -229,6 +229,20 @@ class SerializersTest {
     }
 
     @Test
+    fun `test string serializer invalid UTF-8 sanitization`() {
+        // 0xFF is not valid UTF-8. Decoding should not throw and should replace it.
+        val invalidBytes = "736b6972f302ff7a".decodeHex()
+        assertThat(build.skir.Serializers.string.fromBytes(invalidBytes.toByteArray())).isEqualTo("�z")
+
+        // Lone surrogates are sanitized during UTF-8 encoding.
+        val restored =
+            build.skir.Serializers.string.fromBytes(
+                build.skir.Serializers.string.toBytes("\uD800z").toByteArray(),
+            )
+        assertThat(restored).isEqualTo("?z")
+    }
+
+    @Test
     fun `test bytes serializer - dense flavor`() {
         val values =
             listOf(

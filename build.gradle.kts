@@ -61,7 +61,7 @@ mavenPublishing {
     // Configure POM metadata for the published artifact
     pom {
         name.set("Skir Kotlin Client")
-        description.set("Skir Client for the Kotlin Language")
+        description.set("Serializable Kotlin data types generated from .skir files")
         inceptionYear.set("2025")
         url.set("https://github.com/gepheum/skir-kotlin-client")
 
